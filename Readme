@@ -1,0 +1,17 @@
+The goals is to build a robot toy for a four year old named Kabir. 
+The robot has the ability to:
+ - listen
+ - speak
+ - is integrated with an LLM
+ - can see
+ - can move
+
+The main compute unit is a raspberry pi 5 with 8gb. The pi is running 
+
+The robot is based of a kit by sunfounder called the picar-x. 
+
+I'd like the orchestration architecture to be based on py_trees a behavior tree. 
+
+Also, at some point in the future as the project get more advanced I'd like to integrate with ROS2 but not now. So I'd like to atleast ensure that the code is portable. 
+
+I want to develop most of the code locally on my mac mini m4 and then push up to the robot. 

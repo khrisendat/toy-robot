@@ -1,0 +1,6 @@
+py-trees
+google-generativeai
+pvporcupine
+pyaudio
+picar-x
+python-dotenv
