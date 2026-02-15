@@ -1,6 +1,7 @@
 py-trees
 google-generativeai
-pvporcupine
+openwakeword
+onnxruntime
 pyaudio
 picar-x
 python-dotenv

@@ -7,5 +7,3 @@ load_dotenv()
 # Gemini API Key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Porcupine Access Key for wake word detection
-PORCUPINE_ACCESS_KEY = os.getenv("PORCUPINE_ACCESS_KEY")
