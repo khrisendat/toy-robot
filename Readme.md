@@ -54,6 +54,6 @@ This will start the behavior tree and the robot will begin listening for the wak
 To connect to the Raspberry Pi via SSH, use the following command. The IP address has been set to be static via DHCP reservation.
 
 ```bash
-ssh Whoopsie@192.168.5.9
+ssh whoopie@192.168.5.9
 ```
 
