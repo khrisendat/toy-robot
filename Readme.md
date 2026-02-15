@@ -8,10 +8,23 @@ The robot's logic is orchestrated using a behavior tree implemented with the `py
 
 ## Getting Started
 
+### System Dependencies
+
+This project relies on some system-level packages that need to be installed separately from the Python requirements.
+
+- **On macOS (with Homebrew):**
+  ```bash
+  brew install mpg123
+  ```
+
+- **On Raspberry Pi (Debian):**
+  ```bash
+  sudo apt-get update && sudo apt-get install -y mpg123
+  ```
+
 ### Prerequisites
 
 *   Python 3.8+
-*   A Porcupine Access Key for wake word detection.
 *   A Gemini API Key for LLM interaction.
 
 ### Installation
@@ -20,7 +33,7 @@ The robot's logic is orchestrated using a behavior tree implemented with the `py
     ```bash
     git clone <repository_url>
     ```
-2.  Navigate to the `kabir_robot` directory:
+2.  Navigate to the `toy_robot` directory:
     ```bash
     cd kabir_robot
     ```
@@ -33,10 +46,9 @@ The robot's logic is orchestrated using a behavior tree implemented with the `py
     ```bash
     pip install -r requirements.txt
     ```
-5.  Create a `.env` file in the `kabir_robot` directory and add your API keys:
+5.  Create a `.env` file in the `toy_robot` directory and add your API keys:
     ```
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-    PORCUPINE_ACCESS_KEY="YOUR_PORCUPINE_ACCESS_KEY"
     ```
 
 ### Running the Robot
@@ -54,6 +66,6 @@ This will start the behavior tree and the robot will begin listening for the wak
 To connect to the Raspberry Pi via SSH, use the following command. The IP address has been set to be static via DHCP reservation.
 
 ```bash
-ssh whoopie@192.168.5.9
+ssh whoopsie@192.168.5.9
 ```
 

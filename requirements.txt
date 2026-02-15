@@ -5,3 +5,4 @@ onnxruntime
 pyaudio
 picar-x
 python-dotenv
+google-cloud-texttospeech
