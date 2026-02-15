@@ -4,8 +4,8 @@ import numpy as np
 
 class WakeWordDetector:
     def __init__(self):
-        # Initialize openwakeword
-        self.oww = openwakeword.Model()
+        # Initialize openwakeword to only listen for "Hey Jarvis"
+        self.oww = openwakeword.Model(wakeword_models=["hey_jarvis"])
         
         # Initialize PyAudio
         self.pa = pyaudio.PyAudio()
@@ -18,7 +18,7 @@ class WakeWordDetector:
         )
 
     def wait_for_wake_word(self):
-        print("Listening for wake word...")
+        print("Listening for 'Hey Jarvis'...")
         while True:
             # Read audio chunk
             audio_chunk = self.audio_stream.read(1280)
@@ -29,12 +29,9 @@ class WakeWordDetector:
             # Process with openwakeword
             prediction = self.oww.predict(audio_np)
             
-            # Check for wake word activation (any score > 0.5)
-            if any(score > 0.5 for score in prediction.values()):
-                print("Wake word detected!")
-                # We can also see which one it was:
-                # activated_models = [model for model, score in prediction.items() if score > 0.5]
-                # print(f"Models activated: {activated_models}")
+            # Check for 'hey_jarvis' activation
+            if prediction.get("hey_jarvis", 0) > 0.5:
+                print("Wake word 'Hey Jarvis' detected!")
                 return
 
     def __del__(self):
