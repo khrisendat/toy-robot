@@ -1,7 +1,6 @@
 py-trees
 google-generativeai
-openwakeword
-onnxruntime
+vosk
 pyaudio
 python-dotenv
 google-cloud-texttospeech

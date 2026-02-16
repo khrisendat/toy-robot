@@ -1,9 +1,12 @@
 from google.cloud import texttospeech
+from google.oauth2 import service_account
 import os
+from src import config
 
 class Speaker:
     def __init__(self):
-        self.client = texttospeech.TextToSpeechClient()
+        credentials = service_account.Credentials.from_service_account_file(config.SERVICE_ACCOUNT_KEY)
+        self.client = texttospeech.TextToSpeechClient(credentials=credentials)
         self.voice = texttospeech.VoiceSelectionParams(
             language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
         )
@@ -14,6 +17,7 @@ class Speaker:
     def say(self, text):
         synthesis_input = texttospeech.SynthesisInput(text=text)
         try:
+            print(f"Speaking: {text}")
             response = self.client.synthesize_speech(
                 input=synthesis_input, voice=self.voice, audio_config=self.audio_config
             )

@@ -14,8 +14,3 @@ class Speak(py_trees.behaviour.Behaviour):
         message = self.blackboard.response_text
         self.speaker.say(message)
         return py_trees.common.Status.SUCCESS
-
-    def terminate(self, new_status):
-        if self.speaker:
-            del self.speaker
-            self.speaker = None

@@ -4,7 +4,7 @@ from .. import config
 class LLMClient:
     def __init__(self):
         genai.configure(api_key=config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-flash')
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     def generate_response(self, prompt):
         try:

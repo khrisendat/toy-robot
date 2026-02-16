@@ -1,9 +1,12 @@
 import pyaudio
 from google.cloud import speech
+from google.oauth2 import service_account
+from src import config
 
 class Listener:
     def __init__(self):
-        self.client = speech.SpeechClient()
+        credentials = service_account.Credentials.from_service_account_file(config.SERVICE_ACCOUNT_KEY)
+        self.client = speech.SpeechClient(credentials=credentials)
         self.audio_config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
             sample_rate_hertz=16000,

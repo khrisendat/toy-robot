@@ -26,43 +26,36 @@ This project relies on some system-level packages and SDKs that need to be insta
   sudo apt-get update && sudo apt-get install -y mpg123 libportaudio-dev
   ```
 
-#### 2. Google Cloud SDK
+#### 2. Google Cloud Authentication
 
-The robot uses Google Cloud for Text-to-Speech and Speech-to-Text, which requires authentication.
+The robot uses Google Cloud for Text-to-Speech and Speech-to-Text. Authentication is handled via a Service Account Key.
 
-- **On macOS (with Homebrew):**
-  1. Install the SDK:
-     ```bash
-     brew install --cask google-cloud-sdk
-     ```
-  2. Initialize the SDK. This will open a browser to log you in.
-     ```bash
-     gcloud init
-     ```
-  3. Set up application default credentials:
-     ```bash
-     gcloud auth application-default login
-     ```
-
-- **On Raspberry Pi (Debian):**
-  1. Run the interactive installer:
-     ```bash
-     curl -sSL https://sdk.cloud.google.com | bash
-     ```
-  2. Restart your shell or run `source ~/.bashrc`.
-  3. Initialize the SDK.
-     ```bash
-     gcloud init
-     ```
-  4. Set up application default credentials. This will provide a URL to open in a browser on your main computer.
-     ```bash
-     gcloud auth application-default login
-     ```
+1.  **Create a Service Account:**
+    - Go to the [Google Cloud Console Service Accounts page](https://console.cloud.google.com/iam-admin/serviceaccounts).
+    - Select your project.
+    - Click **"+ CREATE SERVICE ACCOUNT"**, give it a name (e.g., `toy-robot-sa`), and click **"CREATE AND CONTINUE"**.
+    - Grant it the **"Project" > "Editor"** role, then click **"CONTINUE"** and **"DONE"**.
+2.  **Create and Download a Key:**
+    - Find your new service account in the list, click the three dots under "Actions", and select **"Manage keys"**.
+    - Click **"ADD KEY" > "Create new key"**.
+    - Choose **"JSON"** and click **"CREATE"**. A JSON file will be downloaded.
+3.  **Add Key to Project:**
+    - Rename the downloaded file to `service-account-key.json`.
+    - Move it to the root of the `toy_robot` project directory. The `.gitignore` file is already configured to ignore this file.
 
 ### Prerequisites
 
 *   Python 3.8+
 *   A Gemini API Key for LLM interaction.
+
+### Vosk Model Installation
+
+This project uses the Vosk library for offline wake word detection. A small language model is required. A script is provided to automate the download and setup into a `models/vosk` directory.
+
+From the root of the `toy_robot` project directory, run:
+```bash
+./scripts/download_model.sh
+```
 
 ### Installation
 
@@ -83,7 +76,7 @@ The robot uses Google Cloud for Text-to-Speech and Speech-to-Text, which require
     ```bash
     pip install -r requirements.txt
     ```
-5.  Create a `.env` file in the `toy_robot` directory and add your API keys:
+5.  Create a `.env` file in the `toy_robot` directory and add your API key:
     ```
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
     ```

@@ -1,41 +1,41 @@
-import openwakeword
+from vosk import Model, KaldiRecognizer
 import pyaudio
-import numpy as np
+import json
+import os
 
 class WakeWordDetector:
     def __init__(self):
-        # Initialize openwakeword to use a specific, locally downloaded model file
-        self.oww = openwakeword.Model(wakeword_models=["models/hey_jarvis_v0.1.onnx"], inference_framework='onnx')
+        # Construct an absolute path to the model directory
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'models', 'vosk')
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"The Vosk model directory was not found at {model_path}. Please run the download script: ./scripts/download_model.sh")
         
-        # Initialize PyAudio
+        self.model = Model(model_path)
+        self.recognizer = KaldiRecognizer(self.model, 16000)
+        
         self.pa = pyaudio.PyAudio()
         self.audio_stream = self.pa.open(
-            rate=16000,  # openwakeword expects 16kHz sample rate
+            rate=16000,
             channels=1,
             format=pyaudio.paInt16,
             input=True,
-            frames_per_buffer=1280  # 80ms chunks
+            frames_per_buffer=8192
         )
+        self.wake_word = "hey robot"
 
     def wait_for_wake_word(self):
-        print("Listening for 'Hey Jarvis'...")
+        print(f"Listening for '{self.wake_word}'...")
         while True:
-            # Read audio chunk
-            audio_chunk = self.audio_stream.read(1280)
-            
-            # Convert to numpy array
-            audio_np = np.frombuffer(audio_chunk, dtype=np.int16)
-            
-            # Process with openwakeword
-            prediction = self.oww.predict(audio_np)
-            
-            # Check for 'hey_jarvis' activation
-            if prediction.get("hey_jarvis", 0) > 0.5:
-                print("Wake word 'Hey Jarvis' detected!")
-                return
+            data = self.audio_stream.read(4096)
+            if self.recognizer.AcceptWaveform(data):
+                result = json.loads(self.recognizer.Result())
+                if self.wake_word in result.get("text", ""):
+                    print("Wake word detected!")
+                    return
 
     def __del__(self):
-        if self.audio_stream is not None:
+        if hasattr(self, 'audio_stream') and self.audio_stream is not None:
+            self.audio_stream.stop_stream()
             self.audio_stream.close()
-        if self.pa is not None:
+        if hasattr(self, 'pa') and self.pa is not None:
             self.pa.terminate()

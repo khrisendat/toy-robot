@@ -26,8 +26,3 @@ class GetLLMResponse(py_trees.behaviour.Behaviour):
         response = self.llm_client.generate_response(full_prompt)
         self.blackboard.response_text = response
         return py_trees.common.Status.SUCCESS
-
-    def terminate(self, new_status):
-        if self.llm_client:
-            del self.llm_client
-            self.llm_client = None

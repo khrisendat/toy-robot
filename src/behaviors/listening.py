@@ -1,6 +1,5 @@
 import py_trees
-from src.services.wake_word import WakeWordDetector
-from src.services.listener import Listener
+from src.services.api import WakeWordDetector, Listener
 
 class ListenForWakeWord(py_trees.behaviour.Behaviour):
     def __init__(self, name="ListenForWakeWord"):
@@ -11,12 +10,6 @@ class ListenForWakeWord(py_trees.behaviour.Behaviour):
     def update(self):
         self.wake_word_detector.wait_for_wake_word()
         return py_trees.common.Status.SUCCESS
-
-    def terminate(self, new_status):
-        # Clean up resources
-        if self.wake_word_detector:
-            del self.wake_word_detector
-            self.wake_word_detector = None
 
 class ListenForCommand(py_trees.behaviour.Behaviour):
     def __init__(self, name="ListenForCommand"):
@@ -34,9 +27,3 @@ class ListenForCommand(py_trees.behaviour.Behaviour):
         else:
             # Return failure if no command was heard, so the tree stops
             return py_trees.common.Status.FAILURE
-
-    def terminate(self, new_status):
-        # Clean up resources
-        if self.listener:
-            del self.listener
-            self.listener = None
