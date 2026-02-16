@@ -11,3 +11,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # This is used for authenticating with Google Cloud services like Text-to-Speech and Speech-to-Text
 SERVICE_ACCOUNT_KEY = "service-account-key.json"
 
+# Audio Input Device Index
+# Set AUDIO_INPUT_DEVICE_INDEX in your .env file
+# Run 'arecord -l' on Raspberry Pi to find the correct device index
+AUDIO_INPUT_DEVICE_INDEX = int(os.getenv("AUDIO_INPUT_DEVICE_INDEX", "0"))
+

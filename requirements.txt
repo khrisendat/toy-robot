@@ -1,7 +1,7 @@
 py-trees
-google-generativeai
+google-genai
 vosk
 pyaudio
 python-dotenv
-google-cloud-texttospeech
 google-cloud-speech
+numpy

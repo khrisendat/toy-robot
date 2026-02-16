@@ -1,4 +1,5 @@
 import pyaudio
+import numpy as np
 from google.cloud import speech
 from google.oauth2 import service_account
 from src import config
@@ -14,22 +15,35 @@ class Listener:
         )
         self.pa = pyaudio.PyAudio()
 
+    def _stereo_to_mono(self, stereo_data):
+        """Convert stereo audio data to mono by averaging channels."""
+        # Convert bytes to numpy array of 16-bit integers
+        audio = np.frombuffer(stereo_data, dtype=np.int16)
+        # Reshape to (num_samples, 2) for stereo
+        audio = audio.reshape(-1, 2)
+        # Average the two channels to create mono
+        mono = np.mean(audio, axis=1).astype(np.int16)
+        # Convert back to bytes
+        return mono.tobytes()
+
     def listen(self, duration=5):
         print("Listening for command...")
         
         stream = self.pa.open(
             format=pyaudio.paInt16,
-            channels=1,
+            channels=2,  # USB devices often require stereo (2 channels)
             rate=16000,
             input=True,
             frames_per_buffer=1024,
-            input_device_index=3 # Specify the correct input device index
+            input_device_index=config.AUDIO_INPUT_DEVICE_INDEX
         )
 
         frames = []
         for _ in range(0, int(16000 / 1024 * duration)):
             data = stream.read(1024)
-            frames.append(data)
+            # Convert stereo to mono
+            mono_data = self._stereo_to_mono(data)
+            frames.append(mono_data)
 
         stream.stop_stream()
         stream.close()
