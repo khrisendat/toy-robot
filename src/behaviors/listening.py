@@ -5,9 +5,7 @@ from src.services.listener import Listener
 class ListenForWakeWord(py_trees.behaviour.Behaviour):
     def __init__(self, name="ListenForWakeWord"):
         super(ListenForWakeWord, self).__init__(name)
-        self.wake_word_detector = None
-
-    def setup(self, **kwargs):
+        # Initialize the detector in the constructor
         self.wake_word_detector = WakeWordDetector()
 
     def update(self):
@@ -15,17 +13,17 @@ class ListenForWakeWord(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 
     def terminate(self, new_status):
+        # Clean up resources
         if self.wake_word_detector:
             del self.wake_word_detector
+            self.wake_word_detector = None
 
 class ListenForCommand(py_trees.behaviour.Behaviour):
     def __init__(self, name="ListenForCommand"):
         super(ListenForCommand, self).__init__(name)
         self.blackboard = self.attach_blackboard_client()
         self.blackboard.register_key(key="command_text", access=py_trees.common.Access.WRITE)
-        self.listener = None
-
-    def setup(self, **kwargs):
+        # Initialize the listener in the constructor
         self.listener = Listener()
 
     def update(self):
@@ -38,5 +36,7 @@ class ListenForCommand(py_trees.behaviour.Behaviour):
             return py_trees.common.Status.FAILURE
 
     def terminate(self, new_status):
+        # Clean up resources
         if self.listener:
             del self.listener
+            self.listener = None

@@ -17,9 +17,6 @@ class GetLLMResponse(py_trees.behaviour.Behaviour):
         self.blackboard = self.attach_blackboard_client()
         self.blackboard.register_key(key="command_text", access=py_trees.common.Access.READ)
         self.blackboard.register_key(key="response_text", access=py_trees.common.Access.WRITE)
-        self.llm_client = None
-
-    def setup(self, **kwargs):
         self.llm_client = LLMClient()
 
     def update(self):
@@ -33,3 +30,4 @@ class GetLLMResponse(py_trees.behaviour.Behaviour):
     def terminate(self, new_status):
         if self.llm_client:
             del self.llm_client
+            self.llm_client = None

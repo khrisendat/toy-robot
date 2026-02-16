@@ -7,9 +7,6 @@ class Speak(py_trees.behaviour.Behaviour):
         self.blackboard = self.attach_blackboard_client()
         # Read the response_text key instead of the old greeting_message
         self.blackboard.register_key(key="response_text", access=py_trees.common.Access.READ)
-        self.speaker = None
-
-    def setup(self, **kwargs):
         self.speaker = Speaker()
 
     def update(self):
@@ -21,3 +18,4 @@ class Speak(py_trees.behaviour.Behaviour):
     def terminate(self, new_status):
         if self.speaker:
             del self.speaker
+            self.speaker = None

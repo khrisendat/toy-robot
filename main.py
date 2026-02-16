@@ -14,7 +14,7 @@ def create_root():
     root = py_trees.composites.Selector("RobotRoot", memory=True)
 
     # This is the main conversational sequence
-    conversation_sequence = py_trees.composites.Sequence("Conversation")
+    conversation_sequence = py_trees.composites.Sequence("Conversation", memory=False)
     conversation_sequence.add_children([
         ListenForWakeWord(),
         ListenForCommand(),
