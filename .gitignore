@@ -126,3 +126,6 @@ dmypy.json
 
 # Google Cloud Service Account Key
 service-account-key.json
+
+# Generated audio files
+output.mp3
