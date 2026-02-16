@@ -4,8 +4,8 @@ import numpy as np
 
 class WakeWordDetector:
     def __init__(self):
-        # Initialize openwakeword to only listen for "Hey Jarvis" and use the ONNX backend
-        self.oww = openwakeword.Model(wakeword_models=["hey_jarvis"], inference_framework='onnx')
+        # Initialize openwakeword to use a specific, locally downloaded model file
+        self.oww = openwakeword.Model(wakeword_models=["models/hey_jarvis_v0.1.onnx"], inference_framework='onnx')
         
         # Initialize PyAudio
         self.pa = pyaudio.PyAudio()
