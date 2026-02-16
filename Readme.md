@@ -25,6 +25,8 @@ This project relies on some system-level packages and SDKs that need to be insta
   ```bash
   sudo apt-get update && sudo apt-get install -y mpg123 libportaudio-dev
   ```
+  **Troubleshooting Audio Input:**
+  If the robot doesn't respond to voice commands, you might need to explicitly set the audio input device index. Run `arecord -l` on your Raspberry Pi to list available capture devices. Look for your microphone (e.g., "USB PnP Sound Device") and note its `card` number (e.g., `card 3`). Then, update the `input_device_index` in `src/services/wake_word.py` and `src/services/listener.py` to match this number.
 
 #### 2. Google Cloud Authentication
 

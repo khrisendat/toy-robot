@@ -22,7 +22,8 @@ class Listener:
             channels=1,
             rate=16000,
             input=True,
-            frames_per_buffer=1024
+            frames_per_buffer=1024,
+            input_device_index=3 # Specify the correct input device index
         )
 
         frames = []

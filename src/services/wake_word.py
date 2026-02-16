@@ -19,7 +19,8 @@ class WakeWordDetector:
             channels=1,
             format=pyaudio.paInt16,
             input=True,
-            frames_per_buffer=8192
+            frames_per_buffer=1024,
+            input_device_index=3 # Specify the correct input device index
         )
         self.wake_word = "hey robot"
 

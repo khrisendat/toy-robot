@@ -12,8 +12,13 @@ def is_microphone_available():
     """Check if any audio input devices are available."""
     pa = pyaudio.PyAudio()
     try:
-        return pa.get_device_count() > 0 and pa.get_default_input_device_info() is not None
-    except IOError:
+        info = pa.get_host_api_info_by_index(0)
+        num_devices = info.get('deviceCount')
+        for i in range(0, num_devices):
+            if pa.get_device_info_by_host_api_device_index(0, i).get('maxInputChannels') > 0:
+                return True
+        return False
+    except Exception:
         return False
     finally:
         pa.terminate()
