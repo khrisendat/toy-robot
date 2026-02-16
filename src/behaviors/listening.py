@@ -1,5 +1,6 @@
 import py_trees
 from ..services.wake_word import WakeWordDetector
+from ..services.listener import Listener
 
 class ListenForWakeWord(py_trees.behaviour.Behaviour):
     def __init__(self, name="ListenForWakeWord"):
@@ -16,3 +17,26 @@ class ListenForWakeWord(py_trees.behaviour.Behaviour):
     def terminate(self, new_status):
         if self.wake_word_detector:
             del self.wake_word_detector
+
+class ListenForCommand(py_trees.behaviour.Behaviour):
+    def __init__(self, name="ListenForCommand"):
+        super(ListenForCommand, self).__init__(name)
+        self.blackboard = self.attach_blackboard_client()
+        self.blackboard.register_key(key="command_text", access=py_trees.common.Access.WRITE)
+        self.listener = None
+
+    def setup(self, **kwargs):
+        self.listener = Listener()
+
+    def update(self):
+        command = self.listener.listen()
+        if command:
+            self.blackboard.command_text = command
+            return py_trees.common.Status.SUCCESS
+        else:
+            # Return failure if no command was heard, so the tree stops
+            return py_trees.common.Status.FAILURE
+
+    def terminate(self, new_status):
+        if self.listener:
+            del self.listener
