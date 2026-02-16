@@ -1,5 +1,5 @@
 import py_trees
-from ..hardware.speaker import Speaker
+from src.hardware.speaker import Speaker
 
 class Speak(py_trees.behaviour.Behaviour):
     def __init__(self, name="Speak"):

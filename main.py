@@ -1,7 +1,7 @@
 import py_trees
-from behaviors.listening import ListenForWakeWord, ListenForCommand
-from behaviors.generation import GetLLMResponse
-from behaviors.speech import Speak
+from src.behaviors.listening import ListenForWakeWord, ListenForCommand
+from src.behaviors.generation import GetLLMResponse
+from src.behaviors.speech import Speak
 
 def create_root():
     """

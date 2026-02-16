@@ -10,17 +10,54 @@ The robot's logic is orchestrated using a behavior tree implemented with the `py
 
 ### System Dependencies
 
-This project relies on some system-level packages that need to be installed separately from the Python requirements.
+This project relies on some system-level packages and SDKs that need to be installed and configured before installing the Python requirements.
+
+#### 1. Audio Playback & Recording
 
 - **On macOS (with Homebrew):**
+  Install `mpg123` for audio playback and `portaudio` for microphone access.
   ```bash
-  brew install mpg123
+  brew install mpg123 portaudio
   ```
 
 - **On Raspberry Pi (Debian):**
+  Install `mpg123` and the `portaudio` development libraries.
   ```bash
-  sudo apt-get update && sudo apt-get install -y mpg123
+  sudo apt-get update && sudo apt-get install -y mpg123 libportaudio-dev
   ```
+
+#### 2. Google Cloud SDK
+
+The robot uses Google Cloud for Text-to-Speech and Speech-to-Text, which requires authentication.
+
+- **On macOS (with Homebrew):**
+  1. Install the SDK:
+     ```bash
+     brew install --cask google-cloud-sdk
+     ```
+  2. Initialize the SDK. This will open a browser to log you in.
+     ```bash
+     gcloud init
+     ```
+  3. Set up application default credentials:
+     ```bash
+     gcloud auth application-default login
+     ```
+
+- **On Raspberry Pi (Debian):**
+  1. Run the interactive installer:
+     ```bash
+     curl -sSL https://sdk.cloud.google.com | bash
+     ```
+  2. Restart your shell or run `source ~/.bashrc`.
+  3. Initialize the SDK.
+     ```bash
+     gcloud init
+     ```
+  4. Set up application default credentials. This will provide a URL to open in a browser on your main computer.
+     ```bash
+     gcloud auth application-default login
+     ```
 
 ### Prerequisites
 
@@ -51,12 +88,20 @@ This project relies on some system-level packages that need to be installed sepa
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
     ```
 
-### Running the Robot
+### Hardware-Specific Installation (Raspberry Pi Only)
 
-To run the robot, execute the `main.py` script from the `src` directory:
+To control the robot's motors and servos, the `picar-x` library is required. This library only works on a Raspberry Pi. After setting up the main environment, install it with pip:
 
 ```bash
-python src/main.py
+pip install picar-x
+```
+
+### Running the Robot
+
+To run the robot, execute the `main.py` script from the project's root directory:
+
+```bash
+python3 main.py
 ```
 
 This will start the behavior tree and the robot will begin listening for the wake word.

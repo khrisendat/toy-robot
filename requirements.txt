@@ -3,7 +3,6 @@ google-generativeai
 openwakeword
 onnxruntime
 pyaudio
-picar-x
 python-dotenv
 google-cloud-texttospeech
 google-cloud-speech

@@ -1,5 +1,5 @@
 import py_trees
-from ..services.llm import LLMClient
+from src.services.llm import LLMClient
 
 class GetGreeting(py_trees.behaviour.Behaviour):
     def __init__(self, name="GetGreeting"):
