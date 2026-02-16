@@ -9,7 +9,7 @@ class Speaker:
         credentials = service_account.Credentials.from_service_account_file(config.SERVICE_ACCOUNT_KEY)
         self.client = texttospeech.TextToSpeechClient(credentials=credentials)
         self.voice = texttospeech.VoiceSelectionParams(
-            language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+            language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.MALE
         )
         self.audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3
