@@ -18,7 +18,7 @@ class Speaker:
     def say(self, text):
         synthesis_input = texttospeech.SynthesisInput(text=text)
         try:
-            print(f"Speaking: {cleaned_text}")
+            print(f"Speaking: {text}")
             response = self.client.synthesize_speech(
                 input=synthesis_input, voice=self.voice, audio_config=self.audio_config
             )
