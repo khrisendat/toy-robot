@@ -16,9 +16,10 @@ class WakeWordDetector:
         self.recognizer = KaldiRecognizer(self.model, 16000)
         
         self.pa = pyaudio.PyAudio()
+        self.channels = self._get_supported_channels(config.AUDIO_INPUT_DEVICE_INDEX)
         self.audio_stream = self.pa.open(
             rate=16000,
-            channels=2,  # USB devices often require stereo (2 channels)
+            channels=self.channels,
             format=pyaudio.paInt16,
             input=True,
             frames_per_buffer=1024,
@@ -26,23 +27,30 @@ class WakeWordDetector:
         )
         self.wake_word = "hey robot"
 
-    def _stereo_to_mono(self, stereo_data):
-        """Convert stereo audio data to mono by averaging channels."""
+    def _get_supported_channels(self, device_index):
+        """Detect the number of channels supported by the input device."""
+        device_info = self.pa.get_device_info_by_index(device_index)
+        max_channels = int(device_info.get("maxInputChannels", 1))
+        if max_channels >= 2:
+            return 2
+        return 1
+
+    def _to_mono(self, data):
+        """Convert audio data to mono if it is stereo."""
+        if self.channels == 1:
+            return data
         # Convert bytes to numpy array of 16-bit integers
-        audio = np.frombuffer(stereo_data, dtype=np.int16)
-        # Reshape to (num_samples, 2) for stereo
-        audio = audio.reshape(-1, 2)
-        # Average the two channels to create mono
+        audio = np.frombuffer(data, dtype=np.int16)
+        # Reshape to (num_samples, channels) and average across channels
+        audio = audio.reshape(-1, self.channels)
         mono = np.mean(audio, axis=1).astype(np.int16)
-        # Convert back to bytes
         return mono.tobytes()
 
     def wait_for_wake_word(self):
         print(f"Listening for '{self.wake_word}'...")
         while True:
             data = self.audio_stream.read(4096)
-            # Convert stereo to mono for Vosk
-            mono_data = self._stereo_to_mono(data)
+            mono_data = self._to_mono(data)
             if self.recognizer.AcceptWaveform(mono_data):
                 result = json.loads(self.recognizer.Result())
                 if self.wake_word in result.get("text", ""):
