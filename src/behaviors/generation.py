@@ -15,11 +15,11 @@ class GetLLMResponse(py_trees.behaviour.Behaviour):
     def __init__(self, name="GetLLMResponse"):
         super(GetLLMResponse, self).__init__(name)
         self.blackboard = self.attach_blackboard_client()
-        self.blackboard.register_key(key="command_text", access=py_trees.common.Access.READ)
+        self.blackboard.register_key(key="command_audio", access=py_trees.common.Access.READ)
         self.blackboard.register_key(key="response_text", access=py_trees.common.Access.WRITE)
         self.llm_client = LLMClient()
 
     def update(self):
-        response = self.llm_client.generate_response(self.blackboard.command_text)
+        response = self.llm_client.generate_response(self.blackboard.command_audio)
         self.blackboard.response_text = response
         return py_trees.common.Status.SUCCESS

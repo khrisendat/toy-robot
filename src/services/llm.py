@@ -1,3 +1,4 @@
+import base64
 import logging
 import socket
 import time
@@ -23,12 +24,26 @@ class LLMClient:
         self.model = "gemini-2.5-flash-lite"
         self.timeout = 30  # seconds
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
-        self.history = []  # list of {"role": ..., "parts": [...]} dicts
+        self.history = []  # list of {"role": ..., "parts": [...]} dicts (text only)
 
-    def generate_response(self, user_text):
+    def generate_response(self, audio_data):
         logger.info(f"Sending to LLM ({self.model})...")
-        logger.debug(f"User: {user_text}")
-        self.history.append({"role": "user", "parts": [{"text": user_text}]})
+
+        # Build the current user turn — audio for real mic, text for mock
+        if isinstance(audio_data, bytes):
+            encoded = base64.b64encode(audio_data).decode()
+            current_user_parts = [
+                {"inlineData": {"mimeType": "audio/wav", "data": encoded}},
+                {"text": "Respond to what the child said."},
+            ]
+            history_user_text = "[voice input]"
+        else:
+            current_user_parts = [{"text": audio_data}]
+            history_user_text = audio_data
+
+        # Send full text history + current audio turn
+        contents = self.history + [{"role": "user", "parts": current_user_parts}]
+
         start = time.time()
         try:
             response = requests.post(
@@ -36,20 +51,20 @@ class LLMClient:
                 headers={"x-goog-api-key": config.GEMINI_API_KEY},
                 json={
                     "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-                    "contents": self.history,
+                    "contents": contents,
                 },
                 timeout=self.timeout,
             )
             response.raise_for_status()
             text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+            # Store text-only versions in history to keep payload small
+            self.history.append({"role": "user", "parts": [{"text": history_user_text}]})
             self.history.append({"role": "model", "parts": [{"text": text}]})
             logger.info(f"LLM response ({time.time() - start:.2f}s): {text}")
             return text
         except requests.Timeout:
-            self.history.pop()  # remove the user message we just added
             logger.warning(f"LLM timed out after {time.time() - start:.2f}s")
             return "I'm sorry, I'm taking too long to think. Can you try again?"
         except Exception as e:
-            self.history.pop()  # remove the user message we just added
             logger.error(f"LLM error after {time.time() - start:.2f}s: {e}")
             return "I'm sorry, I'm having a little trouble thinking right now."

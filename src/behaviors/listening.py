@@ -18,7 +18,7 @@ class ListenForCommand(py_trees.behaviour.Behaviour):
     def __init__(self, name="ListenForCommand"):
         super(ListenForCommand, self).__init__(name)
         self.blackboard = self.attach_blackboard_client()
-        self.blackboard.register_key(key="command_text", access=py_trees.common.Access.WRITE)
+        self.blackboard.register_key(key="command_audio", access=py_trees.common.Access.WRITE)
         self.listener = Listener()
 
     def update(self):
@@ -26,8 +26,8 @@ class ListenForCommand(py_trees.behaviour.Behaviour):
             if attempt > 0:
                 logger.info(f"Didn't catch that. Listening again... (attempt {attempt + 1}/3)")
             command = self.listener.listen()
-            if command:
-                self.blackboard.command_text = command
+            if command is not None:
+                self.blackboard.command_audio = command
                 return py_trees.common.Status.SUCCESS
         logger.warning("No command heard after 3 attempts. Going back to wake word.")
         return py_trees.common.Status.FAILURE
