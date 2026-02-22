@@ -20,9 +20,6 @@ class GetLLMResponse(py_trees.behaviour.Behaviour):
         self.llm_client = LLMClient()
 
     def update(self):
-        prompt = self.blackboard.command_text
-        # Add a simple system prompt for context
-        full_prompt = f"You are a friendly robot assistant for a four-year-old named Kabir. Be kind, simple, and creative. Your response should be brief. Do not use emojis, asterisks, bullet points, or any special characters — only plain spoken words. The user said: {prompt}"
-        response = self.llm_client.generate_response(full_prompt)
+        response = self.llm_client.generate_response(self.blackboard.command_text)
         self.blackboard.response_text = response
         return py_trees.common.Status.SUCCESS

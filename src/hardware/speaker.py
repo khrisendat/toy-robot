@@ -23,7 +23,7 @@ class Speaker:
         clean_text = text.replace('"', '').replace("'", "").replace("\n", " ")
         cmd = (
             f'echo "{clean_text}"'
-            f' | {self.piper_binary} --model {self.piper_model} --output_raw'
+            f' | {self.piper_binary} --model {self.piper_model} --length-scale 1.4 --output_raw'
             f' | sox -t raw -r 22050 -e signed -b 16 -c 1 - -t raw - norm'
             f' | aplay -D default -r 22050 -f S16_LE -t raw'
         )
