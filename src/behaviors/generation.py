@@ -1,6 +1,7 @@
 import py_trees
 from src.services.llm import LLMClient
 from src.hardware.camera import Camera
+from src import config
 
 class GetGreeting(py_trees.behaviour.Behaviour):
     def __init__(self, name="GetGreeting"):
@@ -9,7 +10,7 @@ class GetGreeting(py_trees.behaviour.Behaviour):
         self.blackboard.register_key(key="greeting_message", access=py_trees.common.Access.WRITE)
 
     def update(self):
-        self.blackboard.greeting_message = "Hello Kabir!"
+        self.blackboard.greeting_message = f"Hello {config.CHILD_NAME}!"
         return py_trees.common.Status.SUCCESS
 
 class GetLLMResponse(py_trees.behaviour.Behaviour):
