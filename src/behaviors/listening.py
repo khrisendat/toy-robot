@@ -20,10 +20,12 @@ class ListenForCommand(py_trees.behaviour.Behaviour):
         self.listener = Listener()
 
     def update(self):
-        command = self.listener.listen()
-        if command:
-            self.blackboard.command_text = command
-            return py_trees.common.Status.SUCCESS
-        else:
-            # Return failure if no command was heard, so the tree stops
-            return py_trees.common.Status.FAILURE
+        for attempt in range(3):
+            if attempt > 0:
+                print(f"Didn't catch that. Listening again... (attempt {attempt + 1}/3)", flush=True)
+            command = self.listener.listen()
+            if command:
+                self.blackboard.command_text = command
+                return py_trees.common.Status.SUCCESS
+        print("No command heard after 3 attempts. Going back to wake word.", flush=True)
+        return py_trees.common.Status.FAILURE

@@ -17,14 +17,7 @@ class WakeWordDetector:
         
         self.pa = pyaudio.PyAudio()
         self.channels = self._get_supported_channels(config.AUDIO_INPUT_DEVICE_INDEX)
-        self.audio_stream = self.pa.open(
-            rate=16000,
-            channels=self.channels,
-            format=pyaudio.paInt16,
-            input=True,
-            frames_per_buffer=1024,
-            input_device_index=config.AUDIO_INPUT_DEVICE_INDEX
-        )
+        self.audio_stream = self._open_stream(config.AUDIO_INPUT_DEVICE_INDEX)
         self.wake_word = "hey robot"
 
     def _get_supported_channels(self, device_index):
@@ -34,6 +27,24 @@ class WakeWordDetector:
         if max_channels >= 2:
             return 2
         return 1
+
+    def _open_stream(self, device_index):
+        """Open audio stream, falling back to mono if stereo fails."""
+        for channels in ([self.channels] if self.channels == 1 else [self.channels, 1]):
+            try:
+                stream = self.pa.open(
+                    rate=16000,
+                    channels=channels,
+                    format=pyaudio.paInt16,
+                    input=True,
+                    frames_per_buffer=1024,
+                    input_device_index=device_index
+                )
+                self.channels = channels
+                return stream
+            except OSError:
+                print(f"Failed to open stream with {channels} channel(s), trying fewer...", flush=True)
+        raise OSError("Could not open audio stream with any channel count.")
 
     def _to_mono(self, data):
         """Convert audio data to mono if it is stereo."""

@@ -27,8 +27,8 @@ class Listener:
         return mono.tobytes()
 
     def listen(self, duration=5):
-        print("Listening for command...")
-        
+        print("Listening for command...", flush=True)
+
         stream = self.pa.open(
             format=pyaudio.paInt16,
             channels=2,  # USB devices often require stereo (2 channels)
@@ -39,16 +39,21 @@ class Listener:
         )
 
         frames = []
-        for _ in range(0, int(16000 / 1024 * duration)):
+        total_chunks = int(16000 / 1024 * duration)
+        chunks_per_second = int(16000 / 1024)
+        for i in range(total_chunks):
             data = stream.read(1024)
             # Convert stereo to mono
             mono_data = self._stereo_to_mono(data)
             frames.append(mono_data)
+            if i % chunks_per_second == 0:
+                seconds_left = duration - (i // chunks_per_second)
+                print(f"Recording... {seconds_left}s left", flush=True)
 
         stream.stop_stream()
         stream.close()
-        
-        print("Finished listening.")
+
+        print("Finished listening. Sending to speech recognition...", flush=True)
 
         audio_data = b"".join(frames)
         audio = speech.RecognitionAudio(content=audio_data)
@@ -57,13 +62,13 @@ class Listener:
             response = self.client.recognize(config=self.audio_config, audio=audio)
             if response.results:
                 transcript = response.results[0].alternatives[0].transcript
-                print(f"Transcript: {transcript}")
+                print(f"Transcript: {transcript}", flush=True)
                 return transcript
             else:
-                print("No speech detected.")
+                print("No speech detected.", flush=True)
                 return ""
         except Exception as e:
-            print(f"Error during speech recognition: {e}")
+            print(f"Error during speech recognition: {e}", flush=True)
             return ""
 
     def __del__(self):
