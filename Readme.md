@@ -60,29 +60,16 @@ The robot uses Piper for offline text-to-speech synthesis. This provides fast, n
    ```
    Default paths are `/home/whoopsie/piper/piper` and `/home/whoopsie/piper/en_GB-alan-low.onnx`.
 
-#### 3. Google Cloud Authentication
+#### 3. Camera (Raspberry Pi Only)
 
-The robot uses Google Cloud for Speech-to-Text recognition. Authentication is handled via a Service Account Key.
-
-1.  **Create a Service Account:**
-    - Go to the [Google Cloud Console Service Accounts page](https://console.cloud.google.com/iam-admin/serviceaccounts).
-    - Select your project.
-    - Click **"+ CREATE SERVICE ACCOUNT"**, give it a name (e.g., `toy-robot-sa`), and click **"CREATE AND CONTINUE"**.
-    - Grant it the **"Project" > "Editor"** role, then click **"CONTINUE"** and **"DONE"**.
-2.  **Create and Download a Key:**
-    - Find your new service account in the list, click the three dots under "Actions", and select **"Manage keys"**.
-    - Click **"ADD KEY" > "Create new key"**.
-    - Choose **"JSON"** and click **"CREATE"**. A JSON file will be downloaded.
-3.  **Add Key to Project:**
-    - Rename the downloaded file to `service-account-key.json`.
-    - Move it to the root of the `toy_robot` project directory. The `.gitignore` file is already configured to ignore this file.
+The robot uses a Pi Camera Module (CSI) for vision. `picamera2` is pre-installed on Raspberry Pi OS — no manual install is needed, but the Python venv must be created with `--system-site-packages` to access it (see Installation below).
 
 ### Prerequisites
 
 *   Python 3.8+
-*   A Gemini API Key for LLM interaction
+*   A Gemini API Key (get one at [aistudio.google.com](https://aistudio.google.com))
 *   (Raspberry Pi only) Piper TTS binary and voice model
-*   (Raspberry Pi only) Google Cloud service account key for Speech-to-Text
+*   (Raspberry Pi only) Pi Camera Module
 
 ### Installation
 
@@ -104,9 +91,10 @@ The robot uses Google Cloud for Speech-to-Text recognition. Authentication is ha
    
    a. Create a virtual environment:
    ```bash
-   python3 -m venv venv
+   python3 -m venv --system-site-packages venv
    source venv/bin/activate
    ```
+   > The `--system-site-packages` flag is required so the venv can access `picamera2`, which is installed at the system level on Raspberry Pi OS.
    
    b. Install Python dependencies:
    ```bash
@@ -134,13 +122,7 @@ The robot uses Google Cloud for Speech-to-Text recognition. Authentication is ha
 4. **Find your audio device index:**
    Run `arecord -l` to list your audio devices, then update `AUDIO_INPUT_DEVICE_INDEX` in `.env`
 
-5. **Set up Google Cloud (for Speech-to-Text):**
-   - Create a service account in Google Cloud Console
-   - Download the JSON key file
-   - Rename it to `service-account-key.json`
-   - Place it in the root of the `toy_robot` directory
-
-6. **Hardware-specific setup (Raspberry Pi only):**
+5. **Hardware-specific setup (Raspberry Pi only):**
    To control the robot's motors and servos, install the `picar-x` library:
    ```bash
    pip install picar-x
