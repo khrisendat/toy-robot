@@ -13,7 +13,7 @@ class WakeWordDetector:
             raise FileNotFoundError(f"The Vosk model directory was not found at {model_path}. Please run the download script: ./scripts/download_model.sh")
         
         self.model = Model(model_path)
-        self.recognizer = KaldiRecognizer(self.model, 16000)
+        self.recognizer = KaldiRecognizer(self.model, 16000, '["hey robot", "[unk]"]')
         
         self.pa = pyaudio.PyAudio()
         self.channels = self._get_supported_channels(config.AUDIO_INPUT_DEVICE_INDEX)
@@ -53,9 +53,19 @@ class WakeWordDetector:
             mono_data = self._to_mono(data)
             if self.recognizer.AcceptWaveform(mono_data):
                 result = json.loads(self.recognizer.Result())
-                if self.wake_word in result.get("text", ""):
+                text = result.get("text", "")
+                if text:
+                    print(f"Heard: '{text}'")
+                if self.wake_word in text:
                     print("Wake word detected!")
                     return
+            else:
+                partial = json.loads(self.recognizer.PartialResult()).get("partial", "")
+                if partial:
+                    print(f"Partial: '{partial}'")
+                    if self.wake_word in partial:
+                        print("Wake word detected!")
+                        return
 
     def __del__(self):
         if hasattr(self, 'audio_stream') and self.audio_stream is not None:
