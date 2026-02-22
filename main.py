@@ -4,11 +4,18 @@ from src.behaviors.listening import ListenForWakeWord, ListenForCommand
 from src.behaviors.generation import GetLLMResponse
 from src.behaviors.speech import Speak
 
+_log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
+_log_datefmt = "%H:%M:%S"
+
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
+    format=_log_format,
+    datefmt=_log_datefmt,
 )
+
+_file_handler = logging.FileHandler("robot.log")
+_file_handler.setFormatter(logging.Formatter(_log_format, datefmt=_log_datefmt))
+logging.getLogger().addHandler(_file_handler)
 
 def create_root():
     """

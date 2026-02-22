@@ -1,13 +1,20 @@
 import logging
+import socket
 import time
 import requests
 from .. import config
+
+# Force IPv4 — Pi's IPv6 stack causes ~120s delays before falling back
+_orig_getaddrinfo = socket.getaddrinfo
+def _ipv4_getaddrinfo(*args, **kwargs):
+    return [r for r in _orig_getaddrinfo(*args, **kwargs) if r[0] == socket.AF_INET]
+socket.getaddrinfo = _ipv4_getaddrinfo
 
 logger = logging.getLogger(__name__)
 
 class LLMClient:
     def __init__(self):
-        self.model = "gemini-3-flash-preview"
+        self.model = "gemini-2.5-flash-lite"
         self.timeout = 30  # seconds
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
 
@@ -18,7 +25,7 @@ class LLMClient:
         try:
             response = requests.post(
                 self.url,
-                params={"key": config.GEMINI_API_KEY},
+                headers={"x-goog-api-key": config.GEMINI_API_KEY},
                 json={"contents": [{"parts": [{"text": prompt}]}]},
                 timeout=self.timeout,
             )
