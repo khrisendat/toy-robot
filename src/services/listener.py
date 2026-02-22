@@ -1,8 +1,12 @@
+import logging
+import time
 import pyaudio
 import numpy as np
 from google.cloud import speech
 from google.oauth2 import service_account
 from src import config
+
+logger = logging.getLogger(__name__)
 
 class Listener:
     def __init__(self):
@@ -17,21 +21,17 @@ class Listener:
 
     def _stereo_to_mono(self, stereo_data):
         """Convert stereo audio data to mono by averaging channels."""
-        # Convert bytes to numpy array of 16-bit integers
         audio = np.frombuffer(stereo_data, dtype=np.int16)
-        # Reshape to (num_samples, 2) for stereo
         audio = audio.reshape(-1, 2)
-        # Average the two channels to create mono
         mono = np.mean(audio, axis=1).astype(np.int16)
-        # Convert back to bytes
         return mono.tobytes()
 
     def listen(self, duration=5):
-        print("Listening for command...", flush=True)
+        logger.info("Listening for command...")
 
         stream = self.pa.open(
             format=pyaudio.paInt16,
-            channels=2,  # USB devices often require stereo (2 channels)
+            channels=2,
             rate=16000,
             input=True,
             frames_per_buffer=1024,
@@ -43,17 +43,17 @@ class Listener:
         chunks_per_second = int(16000 / 1024)
         for i in range(total_chunks):
             data = stream.read(1024)
-            # Convert stereo to mono
             mono_data = self._stereo_to_mono(data)
             frames.append(mono_data)
             if i % chunks_per_second == 0:
                 seconds_left = duration - (i // chunks_per_second)
-                print(f"Recording... {seconds_left}s left", flush=True)
+                logger.debug(f"Recording... {seconds_left}s left")
 
         stream.stop_stream()
         stream.close()
 
-        print("Finished listening. Sending to speech recognition...", flush=True)
+        logger.info("Finished recording. Sending to speech recognition...")
+        start = time.time()
 
         audio_data = b"".join(frames)
         audio = speech.RecognitionAudio(content=audio_data)
@@ -62,13 +62,13 @@ class Listener:
             response = self.client.recognize(config=self.audio_config, audio=audio)
             if response.results:
                 transcript = response.results[0].alternatives[0].transcript
-                print(f"Transcript: {transcript}", flush=True)
+                logger.info(f"Transcript ({time.time() - start:.2f}s): {transcript}")
                 return transcript
             else:
-                print("No speech detected.", flush=True)
+                logger.info(f"No speech detected ({time.time() - start:.2f}s)")
                 return ""
         except Exception as e:
-            print(f"Error during speech recognition: {e}", flush=True)
+            logger.error(f"Speech recognition error: {e}")
             return ""
 
     def __del__(self):

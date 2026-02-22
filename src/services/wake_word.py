@@ -1,32 +1,31 @@
-from vosk import Model, KaldiRecognizer
-import pyaudio
+import logging
 import json
 import os
 import numpy as np
+import pyaudio
+from vosk import Model, KaldiRecognizer
 from src import config
+
+logger = logging.getLogger(__name__)
 
 class WakeWordDetector:
     def __init__(self):
-        # Construct an absolute path to the model directory
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'models', 'vosk')
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"The Vosk model directory was not found at {model_path}. Please run the download script: ./scripts/download_model.sh")
-        
+
         self.model = Model(model_path)
         self.recognizer = KaldiRecognizer(self.model, 16000, '["hey robot", "[unk]"]')
-        
+
         self.pa = pyaudio.PyAudio()
         self.channels = self._get_supported_channels(config.AUDIO_INPUT_DEVICE_INDEX)
         self.audio_stream = self._open_stream(config.AUDIO_INPUT_DEVICE_INDEX)
         self.wake_word = "hey robot"
 
     def _get_supported_channels(self, device_index):
-        """Detect the number of channels supported by the input device."""
         device_info = self.pa.get_device_info_by_index(device_index)
         max_channels = int(device_info.get("maxInputChannels", 1))
-        if max_channels >= 2:
-            return 2
-        return 1
+        return 2 if max_channels >= 2 else 1
 
     def _open_stream(self, device_index):
         """Open audio stream, falling back to mono if stereo fails."""
@@ -43,22 +42,19 @@ class WakeWordDetector:
                 self.channels = channels
                 return stream
             except OSError:
-                print(f"Failed to open stream with {channels} channel(s), trying fewer...", flush=True)
+                logger.warning(f"Failed to open stream with {channels} channel(s), trying fewer...")
         raise OSError("Could not open audio stream with any channel count.")
 
     def _to_mono(self, data):
-        """Convert audio data to mono if it is stereo."""
         if self.channels == 1:
             return data
-        # Convert bytes to numpy array of 16-bit integers
         audio = np.frombuffer(data, dtype=np.int16)
-        # Reshape to (num_samples, channels) and average across channels
         audio = audio.reshape(-1, self.channels)
         mono = np.mean(audio, axis=1).astype(np.int16)
         return mono.tobytes()
 
     def wait_for_wake_word(self):
-        print(f"Listening for '{self.wake_word}'...")
+        logger.info(f"Listening for '{self.wake_word}'...")
         while True:
             data = self.audio_stream.read(4096)
             mono_data = self._to_mono(data)
@@ -66,16 +62,16 @@ class WakeWordDetector:
                 result = json.loads(self.recognizer.Result())
                 text = result.get("text", "")
                 if text:
-                    print(f"Heard: '{text}'")
+                    logger.debug(f"Heard: '{text}'")
                 if self.wake_word in text:
-                    print("Wake word detected!")
+                    logger.info("Wake word detected!")
                     return
             else:
                 partial = json.loads(self.recognizer.PartialResult()).get("partial", "")
                 if partial:
-                    print(f"Partial: '{partial}'")
+                    logger.debug(f"Partial: '{partial}'")
                     if self.wake_word in partial:
-                        print("Wake word detected!")
+                        logger.info("Wake word detected!")
                         return
 
     def __del__(self):

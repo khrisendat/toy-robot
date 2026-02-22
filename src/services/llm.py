@@ -1,14 +1,20 @@
+import logging
+import time
 import requests
 from .. import config
+
+logger = logging.getLogger(__name__)
 
 class LLMClient:
     def __init__(self):
         self.model = "gemini-3-flash-preview"
-        self.timeout = 15  # seconds
+        self.timeout = 30  # seconds
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
 
     def generate_response(self, prompt):
-        print(f"Sending to LLM: {prompt}", flush=True)
+        logger.info(f"Sending to LLM ({self.model})...")
+        logger.debug(f"Prompt: {prompt}")
+        start = time.time()
         try:
             response = requests.post(
                 self.url,
@@ -18,11 +24,11 @@ class LLMClient:
             )
             response.raise_for_status()
             text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-            print(f"LLM response: {text}", flush=True)
+            logger.info(f"LLM response ({time.time() - start:.2f}s): {text}")
             return text
         except requests.Timeout:
-            print(f"LLM request timed out after {self.timeout}s.", flush=True)
+            logger.warning(f"LLM timed out after {time.time() - start:.2f}s")
             return "I'm sorry, I'm taking too long to think. Can you try again?"
         except Exception as e:
-            print(f"An error occurred: {e}", flush=True)
+            logger.error(f"LLM error after {time.time() - start:.2f}s: {e}")
             return "I'm sorry, I'm having a little trouble thinking right now."

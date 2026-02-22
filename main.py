@@ -1,7 +1,14 @@
+import logging
 import py_trees
 from src.behaviors.listening import ListenForWakeWord, ListenForCommand
 from src.behaviors.generation import GetLLMResponse
 from src.behaviors.speech import Speak
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 def create_root():
     """
@@ -37,16 +44,12 @@ def main():
     root = create_root()
     tree = py_trees.trees.BehaviourTree(root)
     
-    print("Starting robot...")
-    
+    logging.getLogger(__name__).info("Starting robot...")
+
     try:
-        # Tick the tree continuously
-        tree.tick_tock(
-            period_ms=500,  # Tick every 500 milliseconds
-        )
+        tree.tick_tock(period_ms=500)
     except KeyboardInterrupt:
-        # Gracefully shut down on Ctrl+C
-        print("Robot shutting down...")
+        logging.getLogger(__name__).info("Robot shutting down...")
         tree.interrupt()
 
 if __name__ == '__main__':
