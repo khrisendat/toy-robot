@@ -13,12 +13,15 @@ socket.getaddrinfo = _ipv4_getaddrinfo
 
 logger = logging.getLogger(__name__)
 
+VISION_SIGNAL = "NEED_CAMERA"
+
 SYSTEM_PROMPT = (
     "You are a friendly robot assistant for a four-year-old named Kabir. "
     "Be kind, simple, and creative. Your response should be brief — just one or two sentences. "
     "Do not use emojis, asterisks, bullet points, or any special characters — only plain spoken words. "
     "Vary your tone and energy to keep things fun and surprising. "
-    "About half the time, end your response with a simple, playful follow-up question to keep the conversation going."
+    "About half the time, end your response with a simple, playful follow-up question to keep the conversation going. "
+    f"If the child asks you to look at something or describe what you see, respond with exactly '{VISION_SIGNAL}' and nothing else."
 )
 
 class LLMClient:
@@ -28,42 +31,57 @@ class LLMClient:
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
         self.history = []  # list of {"role": ..., "parts": [...]} dicts (text only)
 
-    def generate_response(self, audio_data):
+    def _call(self, user_parts):
+        """Make a single API call with the given user parts and return the response text."""
+        contents = self.history + [{"role": "user", "parts": user_parts}]
+        response = requests.post(
+            self.url,
+            headers={"x-goog-api-key": config.GEMINI_API_KEY},
+            json={
+                "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+                "contents": contents,
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+    def generate_response(self, audio_data, get_image=None):
         logger.info(f"Sending to LLM ({self.model})...")
 
-        # Build the current user turn — audio for real mic, text for mock
+        # Build user parts — audio for real mic, text for mock
         if isinstance(audio_data, bytes):
             encoded = base64.b64encode(audio_data).decode()
-            current_user_parts = [
+            user_parts = [
                 {"inlineData": {"mimeType": "audio/wav", "data": encoded}},
                 {"text": "Respond to what the child said."},
             ]
-            history_user_text = "[voice input]"
+            history_text = "[voice input]"
         else:
-            current_user_parts = [{"text": audio_data}]
-            history_user_text = audio_data
-
-        # Send full text history + current audio turn
-        contents = self.history + [{"role": "user", "parts": current_user_parts}]
+            user_parts = [{"text": audio_data}]
+            history_text = audio_data
 
         start = time.time()
         try:
-            response = requests.post(
-                self.url,
-                headers={"x-goog-api-key": config.GEMINI_API_KEY},
-                json={
-                    "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-                    "contents": contents,
-                },
-                timeout=self.timeout,
-            )
-            response.raise_for_status()
-            text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-            # Store text-only versions in history to keep payload small
-            self.history.append({"role": "user", "parts": [{"text": history_user_text}]})
+            text = self._call(user_parts)
+
+            # If Gemini signals it needs the camera, capture and call again
+            if text.strip() == VISION_SIGNAL and get_image is not None:
+                logger.info("Vision requested — capturing image.")
+                image_data = get_image()
+                if image_data:
+                    encoded_image = base64.b64encode(image_data).decode()
+                    vision_parts = user_parts + [
+                        {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
+                    ]
+                    text = self._call(vision_parts)
+                    history_text = "[asked to look]"
+
+            self.history.append({"role": "user", "parts": [{"text": history_text}]})
             self.history.append({"role": "model", "parts": [{"text": text}]})
             logger.info(f"LLM response ({time.time() - start:.2f}s): {text}")
             return text
+
         except requests.Timeout:
             logger.warning(f"LLM timed out after {time.time() - start:.2f}s")
             return "I'm sorry, I'm taking too long to think. Can you try again?"
