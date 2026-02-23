@@ -48,9 +48,7 @@ class CheckBattery(py_trees.behaviour.Behaviour):
 
         if voltage < BATTERY_LOW_THRESHOLD and not self._low_warned:
             logger.warning(f"Battery low: {voltage:.2f}V (threshold: {BATTERY_LOW_THRESHOLD}V)")
-            self.speaker.say(f"Just so you know {config.CHILD_NAME}, my battery is getting low.")
             self._low_warned = True
-            return py_trees.common.Status.FAILURE  # continue normally
 
         return py_trees.common.Status.FAILURE  # battery OK, continue normally
 
@@ -86,7 +84,7 @@ class CheckCliff(py_trees.behaviour.Behaviour):
             logger.warning(f"Cliff detected! Readings: {values}")
             now = time.monotonic()
             if now - self._last_warned_at >= CLIFF_WARN_COOLDOWN:
-                self.speaker.say("Whoa! I'm near the edge! Please move me to safety!")
+                self.speaker.say(f"Whoa! I'm going to fall! {config.CHILD_NAME}, can you save me?")
                 self._last_warned_at = now
             return py_trees.common.Status.SUCCESS  # blocks Conversation
 
