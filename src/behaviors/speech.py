@@ -1,5 +1,4 @@
 import py_trees
-from src.hardware.speaker import Speaker
 import re
 
 def sanitize_for_speech(text):
@@ -24,17 +23,19 @@ def sanitize_for_speech(text):
     return text.strip()
 
 class Speak(py_trees.behaviour.Behaviour):
-    def __init__(self, name="Speak"):
+    def __init__(self, speaker, head=None, name="Speak"):
         super(Speak, self).__init__(name)
         self.blackboard = self.attach_blackboard_client()
-        # Read the response_text key
         self.blackboard.register_key(key="response_text", access=py_trees.common.Access.READ)
-        self.speaker = Speaker()
+        self.speaker = speaker
+        self.head = head
 
     def update(self):
-        # Get the message from the blackboard
         message = self.blackboard.response_text
-        # Clean the message to remove emojis before speaking
         cleaned_message = sanitize_for_speech(message)
+        if self.head:
+            self.head.speaking()
         self.speaker.say(cleaned_message)
+        if self.head:
+            self.head.center()
         return py_trees.common.Status.SUCCESS

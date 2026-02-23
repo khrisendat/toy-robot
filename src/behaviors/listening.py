@@ -5,23 +5,31 @@ from src.services.api import WakeWordDetector, Listener
 logger = logging.getLogger(__name__)
 
 class ListenForWakeWord(py_trees.behaviour.Behaviour):
-    def __init__(self, name="ListenForWakeWord"):
+    def __init__(self, head=None, name="ListenForWakeWord"):
         super(ListenForWakeWord, self).__init__(name)
         self.wake_word_detector = WakeWordDetector()
+        self.head = head
 
     def update(self):
+        if self.head:
+            self.head.idle()
         self.wake_word_detector.wait_for_wake_word()
+        if self.head:
+            self.head.center()
         return py_trees.common.Status.SUCCESS
 
 
 class ListenForCommand(py_trees.behaviour.Behaviour):
-    def __init__(self, name="ListenForCommand"):
+    def __init__(self, head=None, name="ListenForCommand"):
         super(ListenForCommand, self).__init__(name)
         self.blackboard = self.attach_blackboard_client()
         self.blackboard.register_key(key="command_audio", access=py_trees.common.Access.WRITE)
         self.listener = Listener()
+        self.head = head
 
     def update(self):
+        if self.head:
+            self.head.listening()
         for attempt in range(3):
             if attempt > 0:
                 logger.info(f"Didn't catch that. Listening again... (attempt {attempt + 1}/3)")
