@@ -43,6 +43,9 @@ class PiCarX:
     def set_motor_speed(self, motor, speed):
         print(f"MockPiCarX: Setting motor {motor} speed to {speed}")
 
+    def set_dir_servo_angle(self, angle):
+        print(f"MockPiCarX: Steering angle {angle}")
+
     def forward(self, speed):
         print(f"MockPiCarX: Moving forward at speed {speed}")
 

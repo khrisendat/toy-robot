@@ -7,6 +7,7 @@ from src.hardware.speaker import Speaker
 from src.hardware.head import Head
 from src.hardware.camera import Camera
 from src.hardware.grayscale import GrayscaleSensor
+from src.hardware.wheels import Wheels
 from src.services.api import WakeWordDetector, Listener
 from src.services.llm import LLMClient
 
@@ -58,7 +59,7 @@ async def say(speaker, speech_lock, text):
         await run(speaker.say, text)
 
 
-async def conversation_loop(speaker, head, camera, speech_lock):
+async def conversation_loop(speaker, head, wheels, camera, speech_lock):
     wake_word = WakeWordDetector()
     listener = Listener()
     llm = LLMClient()
@@ -66,8 +67,10 @@ async def conversation_loop(speaker, head, camera, speech_lock):
     while True:
         # Wait for wake word
         head.idle()
+        wheels.idle()
         await run(wake_word.wait_for_wake_word)
         head.center()
+        wheels.stop()
 
         # Listen for command — up to 3 attempts
         head.listening()
@@ -132,6 +135,7 @@ async def safety_monitor(speaker, grayscale, speech_lock):
 async def main():
     speaker = Speaker()
     head = Head()
+    wheels = Wheels()
     camera = Camera()
     grayscale = GrayscaleSensor()
     speech_lock = asyncio.Lock()
@@ -141,7 +145,7 @@ async def main():
 
     try:
         await asyncio.gather(
-            conversation_loop(speaker, head, camera, speech_lock),
+            conversation_loop(speaker, head, wheels, camera, speech_lock),
             safety_monitor(speaker, grayscale, speech_lock),
         )
     except asyncio.CancelledError:
