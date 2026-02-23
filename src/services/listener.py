@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 SILENCE_RMS_THRESHOLD = 500   # below this RMS level is treated as silence
 CHUNKS_PER_SECOND = int(16000 / 1024)        # ~15 chunks/sec
 TRAILING_SILENCE_CHUNKS = CHUNKS_PER_SECOND  # stop after ~1s of silence post-speech
+MIN_SPEECH_CHUNKS = CHUNKS_PER_SECOND        # must record at least ~1s before silence can stop it
 
 class Listener:
     def __init__(self):
@@ -48,6 +49,7 @@ class Listener:
         frames = []
         total_chunks = int(16000 / 1024 * duration)
         speech_started = False
+        speech_chunks = 0
         trailing_silent_chunks = 0
 
         for i in range(total_chunks):
@@ -60,10 +62,11 @@ class Listener:
 
             if rms >= SILENCE_RMS_THRESHOLD:
                 speech_started = True
+                speech_chunks += 1
                 trailing_silent_chunks = 0
             elif speech_started:
                 trailing_silent_chunks += 1
-                if trailing_silent_chunks >= TRAILING_SILENCE_CHUNKS:
+                if trailing_silent_chunks >= TRAILING_SILENCE_CHUNKS and speech_chunks >= MIN_SPEECH_CHUNKS:
                     logger.debug("Silence detected after speech, stopping early.")
                     break
 

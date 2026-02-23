@@ -71,11 +71,19 @@ class LLMClient:
                 image_data = get_image()
                 if image_data:
                     encoded_image = base64.b64encode(image_data).decode()
-                    vision_parts = user_parts + [
-                        {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
+                    vision_parts = [
+                        {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}},
+                        {"text": "Describe what you see in this image to the child in one or two fun sentences."},
                     ]
                     text = self._call(vision_parts)
                     history_text = "[asked to look]"
+                else:
+                    text = "I tried to look but my camera isn't working right now!"
+                    history_text = "[camera failed]"
+
+            # Safety net — never let the internal signal reach speech
+            if text.strip() == VISION_SIGNAL:
+                text = "I tried to look but I couldn't quite see. Can you describe it to me?"
 
             self.history.append({"role": "user", "parts": [{"text": history_text}]})
             self.history.append({"role": "model", "parts": [{"text": text}]})
