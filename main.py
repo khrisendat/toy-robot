@@ -9,7 +9,8 @@ from src.hardware.camera import Camera
 from src.hardware.grayscale import GrayscaleSensor
 from src.hardware.wheels import Wheels
 from src.services.api import WakeWordDetector, Listener
-from src.services.llm import LLMClient
+from src.services.conversation import ConversationManager
+from src.lib.memory import MemoryStore
 
 _log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
 _log_datefmt = "%H:%M:%S"
@@ -59,10 +60,10 @@ async def say(speaker, speech_lock, text):
         await run(speaker.say, text)
 
 
-async def conversation_loop(speaker, head, wheels, camera, speech_lock):
+async def conversation_loop(speaker, head, wheels, camera, speech_lock, memory):
     wake_word = WakeWordDetector()
     listener = Listener()
-    llm = LLMClient()
+    llm = ConversationManager(memory=memory)
 
     while True:
         # Wait for wake word
@@ -87,8 +88,11 @@ async def conversation_loop(speaker, head, wheels, camera, speech_lock):
             head.center()
             continue
 
-        # Get LLM response
-        response = await run(llm.generate_response, audio, camera.capture_jpeg)
+        # Get LLM response — memory.store is fire-and-forget via create_task
+        def store_turn(user_text, robot_text):
+            asyncio.create_task(run(memory.store, user_text, robot_text))
+
+        response = await run(llm.generate_response, audio, camera.capture_jpeg, store_turn)
         cleaned = sanitize_for_speech(response)
 
         # Speak response
@@ -138,6 +142,7 @@ async def main():
     wheels = Wheels()
     camera = Camera()
     grayscale = GrayscaleSensor()
+    memory = MemoryStore()
     speech_lock = asyncio.Lock()
 
     logger.info("Starting robot...")
@@ -145,7 +150,7 @@ async def main():
 
     try:
         await asyncio.gather(
-            conversation_loop(speaker, head, wheels, camera, speech_lock),
+            conversation_loop(speaker, head, wheels, camera, speech_lock, memory),
             safety_monitor(speaker, grayscale, speech_lock),
         )
     except asyncio.CancelledError:

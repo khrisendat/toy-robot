@@ -5,3 +5,5 @@ pyaudio
 python-dotenv
 google-cloud-speech
 numpy
+sentence-transformers
+pytest
