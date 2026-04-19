@@ -129,3 +129,6 @@ service-account-key.json
 
 # Generated audio files
 output.mp3
+
+# Conversation memory
+memory.json

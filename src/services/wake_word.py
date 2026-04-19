@@ -23,6 +23,8 @@ class WakeWordDetector:
         self.wake_word = "hey robot"
 
     def _get_supported_channels(self, device_index):
+        if device_index is None:
+            device_index = self.pa.get_default_input_device_info()["index"]
         device_info = self.pa.get_device_info_by_index(device_index)
         max_channels = int(device_info.get("maxInputChannels", 1))
         return 2 if max_channels >= 2 else 1
@@ -56,7 +58,7 @@ class WakeWordDetector:
     def wait_for_wake_word(self):
         logger.info(f"Listening for '{self.wake_word}'...")
         while True:
-            data = self.audio_stream.read(4096)
+            data = self.audio_stream.read(4096, exception_on_overflow=False)
             mono_data = self._to_mono(data)
             if self.recognizer.AcceptWaveform(mono_data):
                 result = json.loads(self.recognizer.Result())

@@ -14,7 +14,8 @@ SERVICE_ACCOUNT_KEY = "service-account-key.json"
 # Audio Input Device Index
 # Set AUDIO_INPUT_DEVICE_INDEX in your .env file
 # Run 'arecord -l' on Raspberry Pi to find the correct device index
-AUDIO_INPUT_DEVICE_INDEX = int(os.getenv("AUDIO_INPUT_DEVICE_INDEX", "0"))
+_device_index = os.getenv("AUDIO_INPUT_DEVICE_INDEX")
+AUDIO_INPUT_DEVICE_INDEX = int(_device_index) if _device_index is not None else None
 
 # Child's name — used in speech and prompts
 CHILD_NAME = os.getenv("CHILD_NAME", "Kabir")
