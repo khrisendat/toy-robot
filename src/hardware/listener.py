@@ -18,14 +18,12 @@ class Listener:
         self.pa = pyaudio.PyAudio()
 
     def _stereo_to_mono(self, stereo_data):
-        """Convert stereo audio data to mono by averaging channels."""
         audio = np.frombuffer(stereo_data, dtype=np.int16)
         audio = audio.reshape(-1, 2)
         mono = np.mean(audio, axis=1).astype(np.int16)
         return mono.tobytes()
 
     def _to_wav(self, frames):
-        """Wrap raw PCM frames in a WAV container."""
         buf = io.BytesIO()
         with wave.open(buf, 'wb') as wf:
             wf.setnchannels(1)

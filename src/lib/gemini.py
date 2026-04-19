@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import socket
 import time
@@ -19,6 +20,38 @@ class GeminiClient:
         self.model = model
         self.timeout = timeout
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+    def generate_stream(self, contents: list, system_prompt: str):
+        """Yield text chunks as they arrive from the streaming endpoint."""
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models"
+            f"/{self.model}:streamGenerateContent?alt=sse"
+        )
+        response = requests.post(
+            url,
+            headers={"x-goog-api-key": config.GEMINI_API_KEY},
+            json={
+                "systemInstruction": {"parts": [{"text": system_prompt}]},
+                "contents": contents,
+            },
+            stream=True,
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        for line in response.iter_lines():
+            if not line:
+                continue
+            if isinstance(line, bytes):
+                line = line.decode("utf-8")
+            if not line.startswith("data: "):
+                continue
+            try:
+                data = json.loads(line[6:])
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                if text:
+                    yield text
+            except (json.JSONDecodeError, KeyError, IndexError):
+                continue
 
     def generate(self, contents: list, system_prompt: str) -> str:
         """

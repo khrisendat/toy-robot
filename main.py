@@ -8,7 +8,7 @@ from src.hardware.head import Head
 from src.hardware.camera import Camera
 from src.hardware.grayscale import GrayscaleSensor
 from src.hardware.wheels import Wheels
-from src.services.api import WakeWordDetector, Listener
+from src.hardware.api import WakeWordDetector, Listener
 from src.services.conversation import ConversationManager
 from src.lib.memory import MemoryStore
 
@@ -88,16 +88,28 @@ async def conversation_loop(speaker, head, wheels, camera, speech_lock, memory):
             head.center()
             continue
 
-        # Get LLM response — memory.store is fire-and-forget via create_task
+        # Stream LLM response sentence by sentence while speaking
         def store_turn(user_text, robot_text):
             asyncio.create_task(run(memory.store, user_text, robot_text))
 
-        response = await run(llm.generate_response, audio, camera.capture_jpeg, store_turn)
-        cleaned = sanitize_for_speech(response)
+        loop = asyncio.get_running_loop()
+        sentence_queue = asyncio.Queue()
 
-        # Speak response
+        def stream_sentences():
+            try:
+                for sentence in llm.generate_response_stream(audio, camera.capture_jpeg, store_turn):
+                    loop.call_soon_threadsafe(sentence_queue.put_nowait, sentence)
+            finally:
+                loop.call_soon_threadsafe(sentence_queue.put_nowait, None)
+
+        loop.run_in_executor(None, stream_sentences)
+
         head.speaking()
-        await say(speaker, speech_lock, cleaned)
+        while True:
+            sentence = await sentence_queue.get()
+            if sentence is None:
+                break
+            await say(speaker, speech_lock, sanitize_for_speech(sentence))
         head.center()
 
 

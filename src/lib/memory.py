@@ -33,7 +33,11 @@ class MemoryStore:
 
         q = self._embed(query)
         scores = self._matrix @ q  # cosine similarity (vectors are unit-normalised)
-        k = min(top_k, len(self._entries))
+        valid = np.isfinite(scores)
+        if not valid.any():
+            return []
+        scores = np.where(valid, scores, -np.inf)
+        k = min(top_k, int(valid.sum()))
         top_indices = np.argpartition(scores, -k)[-k:]
         top_indices = top_indices[np.argsort(scores[top_indices])[::-1]]
         return [self._entries[i]["text"] for i in top_indices]
@@ -72,9 +76,15 @@ class MemoryStore:
         if not self._entries:
             self._matrix = None
             return
-        self._matrix = np.stack(
-            [np.array(e["embedding"], dtype=np.float32) for e in self._entries]
-        )
+        vectors = []
+        for e in self._entries:
+            v = np.array(e["embedding"], dtype=np.float32)
+            if np.isfinite(v).all():
+                vectors.append(v)
+        if not vectors:
+            self._matrix = None
+            return
+        self._matrix = np.stack(vectors)
 
     def _load(self) -> None:
         if not os.path.exists(self.path):

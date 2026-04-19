@@ -54,3 +54,19 @@ class PiCarX:
 
     def stop(self):
         print("MockPiCarX: Stopping motors.")
+
+
+class MockListener:
+    """Text-based listener for environments without a microphone."""
+    def listen(self, duration=5):
+        command = input("Please type your command: ")
+        print(f"Command received: {command}")
+        return command
+
+
+class MockWakeWordDetector:
+    """Text-based wake word detector for environments without a microphone."""
+    def wait_for_wake_word(self):
+        input("Press Enter to simulate wake word detection...")
+        print("Wake word detected!")
+        return

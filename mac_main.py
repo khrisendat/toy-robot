@@ -4,8 +4,8 @@ import re
 
 from src import config
 from src.hardware.macos_speaker import MacOSSpeaker
-from src.services.wake_word import WakeWordDetector
-from src.services.macos_listener import MacOSListener
+from src.hardware.wake_word import WakeWordDetector
+from src.hardware.macos_listener import MacOSListener
 from src.services.conversation import ConversationManager
 from src.lib.memory import MemoryStore
 
@@ -13,6 +13,9 @@ _log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
 _log_datefmt = "%H:%M:%S"
 
 logging.basicConfig(level=logging.INFO, format=_log_format, datefmt=_log_datefmt)
+_file_handler = logging.FileHandler("mac_conversation.log")
+_file_handler.setFormatter(logging.Formatter(_log_format, datefmt=_log_datefmt))
+logging.getLogger().addHandler(_file_handler)
 logger = logging.getLogger(__name__)
 
 
@@ -67,10 +70,23 @@ async def conversation_loop(speaker, speech_lock, memory):
         def store_turn(user_text, robot_text):
             memory.store(user_text, robot_text)
 
-        response = await run(llm.generate_response, audio, None, store_turn)
-        cleaned = sanitize_for_speech(response)
+        loop = asyncio.get_running_loop()
+        sentence_queue = asyncio.Queue()
 
-        await say(speaker, speech_lock, cleaned)
+        def stream_sentences():
+            try:
+                for sentence in llm.generate_response_stream(audio, None, store_turn):
+                    loop.call_soon_threadsafe(sentence_queue.put_nowait, sentence)
+            finally:
+                loop.call_soon_threadsafe(sentence_queue.put_nowait, None)
+
+        loop.run_in_executor(None, stream_sentences)
+
+        while True:
+            sentence = await sentence_queue.get()
+            if sentence is None:
+                break
+            await say(speaker, speech_lock, sanitize_for_speech(sentence))
 
 
 async def main():
