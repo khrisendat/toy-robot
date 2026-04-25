@@ -59,6 +59,8 @@ class GeminiClient:
                 data = json.loads(line[6:])
                 parts = data["candidates"][0]["content"]["parts"]
                 for part in parts:
+                    if part.get("thought"):
+                        continue  # skip internal reasoning from gemini-2.5 thinking models
                     if "functionCall" in part:
                         fc = part["functionCall"]
                         yield {"function_call": {"name": fc["name"], "args": fc.get("args", {}), "id": fc.get("id")}}
@@ -91,6 +93,8 @@ class GeminiClient:
         response.raise_for_status()
         parts = response.json()["candidates"][0]["content"]["parts"]
         for part in parts:
+            if part.get("thought"):
+                continue  # skip internal reasoning from gemini-2.5 thinking models
             if "functionCall" in part:
                 fc = part["functionCall"]
                 return {"function_call": {"name": fc["name"], "args": fc.get("args", {}), "id": fc.get("id")}}
