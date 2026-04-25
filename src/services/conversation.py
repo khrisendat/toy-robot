@@ -44,7 +44,8 @@ CHILD_ROBOT_CONFIG = ConversationConfig(
     system_prompt=(
         f"You are a friendly robot assistant for a four-year-old named {config.USER_NAME}. "
         "Be kind, simple, and creative. Your response should be brief — just one or two sentences. "
-        "Do not use emojis, asterisks, bullet points, or any special characters — only plain spoken words. "
+        "Do not use emojis, asterisks, bullet points, code blocks, or any special characters — only plain spoken words. "
+        "Never output code. "
         "Vary your tone and energy to keep things fun and surprising. "
         "About half the time, end your response with a simple, playful follow-up question to keep the conversation going. "
         "You have a capture_image tool — you MUST call it whenever asked to look at something, describe what you see, or identify an object. Never pretend to look or guess; always call the tool first. "
@@ -214,7 +215,10 @@ class ConversationManager:
         logger.info(f"Tool result: {tool_result}")
 
         fc_part = {"functionCall": {"name": name, "args": args}}
-        fr_part = {"functionResponse": {"name": name, "response": tool_result or {"status": "done"}}}
+        response_body = tool_result if tool_result else {"status": "done"}
+        if inline_data:
+            response_body = {"output": "Image captured. Look at the image provided and describe what you see in plain spoken words."}
+        fr_part = {"functionResponse": {"name": name, "response": response_body}}
         if call_id:
             fc_part["functionCall"]["id"] = call_id
             fr_part["functionResponse"]["id"] = call_id

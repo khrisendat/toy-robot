@@ -6,8 +6,10 @@ from src import config
 from src.hardware.macos_speaker import MacOSSpeaker
 from src.hardware.wake_word import WakeWordDetector
 from src.hardware.macos_listener import MacOSListener
+from src.hardware.api import Camera
 from src.services.conversation import ConversationManager, CHILD_ROBOT_CONFIG
-import src.services.tools  # registers tools into configs
+import src.services.tools  # registers static tools into configs
+from src.services.tools import make_camera_tool
 from src.lib.memory import MemoryStore
 
 _log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
@@ -33,6 +35,7 @@ def sanitize_for_speech(text):
         flags=re.UNICODE,
     )
     text = emoji_pattern.sub("", text)
+    text = re.sub(r"tool_code\s*\n[\s\S]*", "", text)  # strip gemini code execution blocks
     text = re.sub(r"[*#_~`|<>^]", "", text)
     text = re.sub(r" +", " ", text)
     return text.strip()
@@ -48,7 +51,7 @@ async def say(speaker, speech_lock, text):
         await run(speaker.say, text)
 
 
-async def conversation_loop(speaker, speech_lock, memory):
+async def conversation_loop(speaker, speech_lock, memory, camera):
     wake_word = WakeWordDetector()
     listener = MacOSListener()
     llm = ConversationManager(cfg=CHILD_ROBOT_CONFIG, memory=memory)
@@ -76,7 +79,7 @@ async def conversation_loop(speaker, speech_lock, memory):
 
         def stream_sentences():
             try:
-                for sentence in llm.generate_response_stream(audio, None, store_turn):
+                for sentence in llm.generate_response_stream(audio, store_turn):
                     loop.call_soon_threadsafe(sentence_queue.put_nowait, sentence)
             finally:
                 loop.call_soon_threadsafe(sentence_queue.put_nowait, None)
@@ -92,6 +95,8 @@ async def conversation_loop(speaker, speech_lock, memory):
 
 async def main():
     speaker = MacOSSpeaker()
+    camera = Camera()
+    CHILD_ROBOT_CONFIG.tools.append(make_camera_tool(camera.capture_jpeg))
     memory = MemoryStore()
     speech_lock = asyncio.Lock()
 
@@ -99,7 +104,7 @@ async def main():
     await say(speaker, speech_lock, f"Hey {config.USER_NAME}! I'm awake!")
 
     try:
-        await conversation_loop(speaker, speech_lock, memory)
+        await conversation_loop(speaker, speech_lock, memory, camera)
     except asyncio.CancelledError:
         logger.info("Shutting down...")
 

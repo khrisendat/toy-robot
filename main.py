@@ -5,12 +5,13 @@ import re
 from src import config
 from src.hardware.speaker import Speaker
 from src.hardware.head import Head
-from src.hardware.camera import Camera
 from src.hardware.grayscale import GrayscaleSensor
 from src.hardware.wheels import Wheels
-from src.hardware.api import WakeWordDetector, Listener
+from src.hardware.api import WakeWordDetector, Listener, Camera
 from src.services.conversation import ConversationManager, CHILD_ROBOT_CONFIG
 from src.lib.memory import MemoryStore
+import src.services.tools  # registers static tools into configs
+from src.services.tools import make_camera_tool
 
 _log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
 _log_datefmt = "%H:%M:%S"
@@ -43,6 +44,7 @@ def sanitize_for_speech(text):
         flags=re.UNICODE,
     )
     text = emoji_pattern.sub("", text)
+    text = re.sub(r"tool_code\s*\n[\s\S]*", "", text)  # strip gemini code execution blocks
     text = re.sub(r"[*#_~`|<>^]", "", text)
     text = re.sub(r" +", " ", text)
     return text.strip()
@@ -97,7 +99,7 @@ async def conversation_loop(speaker, head, wheels, camera, speech_lock, memory):
 
         def stream_sentences():
             try:
-                for sentence in llm.generate_response_stream(audio, camera.capture_jpeg, store_turn):
+                for sentence in llm.generate_response_stream(audio, store_turn):
                     loop.call_soon_threadsafe(sentence_queue.put_nowait, sentence)
             finally:
                 loop.call_soon_threadsafe(sentence_queue.put_nowait, None)
@@ -153,6 +155,7 @@ async def main():
     head = Head()
     wheels = Wheels()
     camera = Camera()
+    CHILD_ROBOT_CONFIG.tools.append(make_camera_tool(camera.capture_jpeg))
     grayscale = GrayscaleSensor()
     memory = MemoryStore()
     speech_lock = asyncio.Lock()
