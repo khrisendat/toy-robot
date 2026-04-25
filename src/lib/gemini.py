@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class GeminiClient:
-    def __init__(self, model: str = "gemini-2.0-flash", timeout: int = 30):
+    def __init__(self, model: str = "gemini-2.5-flash", timeout: int = 30):
         self.model = model
         self.timeout = timeout
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
