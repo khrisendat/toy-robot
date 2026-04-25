@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import uvicorn
 from src.hardware.macos_camera import MacOSCamera
+from src.hardware.macos_speaker import MacOSSpeaker
 from src.server import create_app
 
 _log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
@@ -18,5 +19,6 @@ logging.getLogger().addHandler(_file_handler)
 
 if __name__ == "__main__":
     camera = MacOSCamera()
-    app = create_app(camera=camera)
+    speaker = MacOSSpeaker()
+    app = create_app(camera=camera, speaker=speaker)
     uvicorn.run(app, host="0.0.0.0", port=8000)

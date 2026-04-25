@@ -26,6 +26,19 @@
     const ws = new WebSocket(`ws://${location.host}/ws`);
     let mediaRecorder = null;
     let audioChunks = [];
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioQueue = Promise.resolve();
+
+    function queueAudio(b64) {
+      audioQueue = audioQueue.then(async () => {
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const buffer = await audioCtx.decodeAudioData(bytes.buffer.slice());
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+        return new Promise(resolve => { source.onended = resolve; source.start(0); });
+      });
+    }
 
     ws.onopen = () => { statusEl.textContent = 'Idle'; btn.disabled = false; };
     ws.onclose = () => { statusEl.textContent = 'Disconnected'; btn.disabled = true; };
@@ -34,7 +47,10 @@
       const msg = JSON.parse(event.data);
       if (msg.type === 'state') {
         statusEl.textContent = msg.state;
+      } else if (msg.type === 'audio') {
+        queueAudio(msg.data);
       } else if (msg.type === 'speak') {
+        // fallback: browser TTS when no backend speaker
         const u = new SpeechSynthesisUtterance(msg.text);
         speechSynthesis.speak(u);
       }
@@ -46,6 +62,7 @@
     btn.addEventListener('touchend', stopRecording);
 
     async function startRecording() {
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunks = [];
       mediaRecorder = new MediaRecorder(stream);

@@ -44,6 +44,28 @@ class Speaker:
             if "Real-time factor" in line:
                 self._synthesis_done.set()
 
+    def synthesize(self, text: str) -> bytes:
+        """Return WAV bytes for the given text using Piper."""
+        clean_text = text.replace('"', '').replace("'", "").replace("\n", " ")
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            tmp_path = f.name
+        try:
+            self._synthesis_done.clear()
+            payload = json.dumps({"text": clean_text, "output_file": tmp_path}) + "\n"
+            self._piper.stdin.write(payload.encode())
+            self._piper.stdin.flush()
+            if not self._synthesis_done.wait(timeout=15):
+                logger.error("Piper synthesis timed out.")
+                return b""
+            with open(tmp_path, "rb") as f:
+                return f.read()
+        except Exception as e:
+            logger.error(f"TTS synthesis error: {e}")
+            return b""
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
     def say(self, text):
         logger.info(f"Speaking: {text}")
         clean_text = text.replace('"', '').replace("'", "").replace("\n", " ")
