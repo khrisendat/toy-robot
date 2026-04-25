@@ -7,7 +7,9 @@ from src.hardware.speaker import Speaker
 from src.hardware.head import Head
 from src.hardware.grayscale import GrayscaleSensor
 from src.hardware.wheels import Wheels
-from src.hardware.api import WakeWordDetector, Listener, Camera
+from src.hardware.wake_word import WakeWordDetector
+from src.hardware.listener import Listener
+from src.hardware.camera import Camera
 from src.services.conversation import ConversationManager, CHILD_ROBOT_CONFIG
 from src.lib.memory import MemoryStore
 import src.services.tools  # registers static tools into configs

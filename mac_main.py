@@ -6,7 +6,7 @@ from src import config
 from src.hardware.macos_speaker import MacOSSpeaker
 from src.hardware.wake_word import WakeWordDetector
 from src.hardware.macos_listener import MacOSListener
-from src.hardware.api import Camera
+from src.hardware.macos_camera import MacOSCamera as Camera
 from src.services.conversation import ConversationManager, CHILD_ROBOT_CONFIG
 import src.services.tools  # registers static tools into configs
 from src.services.tools import make_camera_tool
