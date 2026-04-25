@@ -35,6 +35,7 @@ class GeminiClient:
         body = {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": contents,
+            "generationConfig": {"thinkingConfig": {"thinkingBudget": 512}},
         }
         if tool_declarations:
             body["tools"] = [{"function_declarations": tool_declarations}]
@@ -78,6 +79,7 @@ class GeminiClient:
         body = {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": contents,
+            "generationConfig": {"thinkingConfig": {"thinkingBudget": 512}},
         }
         if tool_declarations:
             body["tools"] = [{"function_declarations": tool_declarations}]
