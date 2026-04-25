@@ -9,190 +9,178 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #08090f;
+      background: #070b14;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       font-family: 'Courier New', monospace;
-      color: #4df0ff;
+      color: #4d9fff;
       user-select: none;
     }
 
-    /* ── Face ─────────────────────────────────────────── */
-    #face { width: min(80vw, 340px); height: auto; }
+    #face { width: min(80vw, 360px); height: auto; overflow: visible; }
 
-    .head        { fill: #111827; stroke: #4df0ff; stroke-width: 2.5; }
-    .head-shine  { fill: url(#shine); opacity: 0.08; }
-    .ear         { fill: #111827; stroke: #4df0ff; stroke-width: 2; }
-    .panel-line  { stroke: #4df0ff; stroke-width: 1; opacity: 0.25; }
+    /* ── Base elements ───────────────────────────────── */
+    .head         { fill: url(#head-grad); stroke: #4d9fff; stroke-width: 2.5;
+                    filter: drop-shadow(0 0 18px rgba(77,159,255,0.25)); }
+    .ear          { fill: #0e2044; stroke: #4d9fff; stroke-width: 2; }
+    .antenna-stem { stroke: #4d9fff; stroke-width: 2.5; }
+    .antenna-ball { fill: #4d9fff; }
 
-    /* Antenna */
-    .antenna      { stroke: #4df0ff; stroke-width: 2.5; }
-    .antenna-ball { fill: #4df0ff; }
+    .eye-frame    { fill: #050d1a; stroke: #4d9fff; stroke-width: 2.5; }
+    .iris         { fill: #4d9fff; }
+    .pupil        { fill: #050d1a; }
+    .eye-shine    { fill: #fff; opacity: 0.55; }
+    /* Eyelid slides down to cover the eye on blink */
+    .eyelid       { fill: #122040; transform-box: fill-box; transform-origin: top center; transform: scaleY(0); }
 
-    /* Eyes */
-    .eye-bg   { fill: #050810; stroke: #4df0ff; stroke-width: 2; }
-    .iris     { fill: #4df0ff; }
-    .pupil    { fill: #050810; }
-    .shine    { fill: #fff; opacity: 0.55; }
-    .eyelid   { fill: #111827; transform-box: fill-box; transform-origin: top center; transform: scaleY(0); }
+    .mouth-frame  { fill: #050d1a; stroke: #4d9fff; stroke-width: 2.5; }
+    .mouth-bar    { fill: #4d9fff; transform-box: fill-box; transform-origin: bottom center; }
+    .idle-mouth   { stroke: #4d9fff; stroke-width: 3; stroke-linecap: round; }
 
-    /* Mouth */
-    .mouth-bg  { fill: #050810; stroke: #4df0ff; stroke-width: 2; }
-    .mouth-bar {
-      fill: #4df0ff;
-      transform-box: fill-box;
-      transform-origin: bottom center;
-    }
-    .idle-line { stroke: #4df0ff; stroke-width: 3; stroke-linecap: round; opacity: 1; }
-
-    /* ── State: idle ──────────────────────────────────── */
-    .s-idle .antenna-ball { animation: ant-pulse 3s ease-in-out infinite; }
+    /* ── Idle ────────────────────────────────────────── */
+    .s-idle .antenna-ball { animation: ant-idle 3s ease-in-out infinite; }
     .s-idle .eyelid       { animation: blink 5s ease-in-out infinite; }
-    .s-idle .mouth-bar    { transform: scaleY(0.18); }
-    .s-idle .idle-line    { opacity: 1; }
+    .s-idle .mouth-bar    { transform: scaleY(0.15); }
+    .s-idle .idle-mouth   { opacity: 1; }
 
-    @keyframes ant-pulse {
-      0%,100% { opacity: 1;   r: 7; }
-      50%     { opacity: 0.3; r: 5; }
+    @keyframes ant-idle {
+      0%,100% { opacity:1; } 50% { opacity:0.25; }
     }
     @keyframes blink {
-      0%,88%,100% { transform: scaleY(0); }
-      92%,96%     { transform: scaleY(1); }
+      0%,85%,100% { transform:scaleY(0); }
+      91%,96%     { transform:scaleY(1); }
     }
 
-    /* ── State: listening ─────────────────────────────── */
-    .s-listening .iris        { animation: iris-grow 0.3s ease forwards; }
-    .s-listening .eye-bg      { animation: eye-glow 0.8s ease-in-out infinite alternate; }
-    .s-listening .antenna-ball{ animation: ant-fast 0.6s ease-in-out infinite; }
-    .s-listening .idle-line   { opacity: 1; }
-    .s-listening .mouth-bar   { transform: scaleY(0.18); }
+    /* ── Listening ───────────────────────────────────── */
+    .s-listening .eye-frame    { animation: eye-glow 0.7s ease-in-out infinite alternate; }
+    .s-listening .iris         { animation: iris-pop 0.25s ease forwards; }
+    .s-listening .antenna-ball { animation: ant-listen 0.5s ease-in-out infinite; }
+    .s-listening .mouth-bar    { transform: scaleY(0.15); }
+    .s-listening .idle-mouth   { opacity: 1; }
 
-    @keyframes iris-grow {
-      to { r: 20; }
-    }
     @keyframes eye-glow {
-      from { filter: drop-shadow(0 0 4px #4df0ff); }
-      to   { filter: drop-shadow(0 0 14px #4df0ff); }
+      from { filter: drop-shadow(0 0 4px #4d9fff); }
+      to   { filter: drop-shadow(0 0 16px #4d9fff); }
     }
-    @keyframes ant-fast {
-      0%,100% { opacity: 1; }
-      50%     { opacity: 0.1; }
-    }
+    @keyframes iris-pop { to { r: 21; } }
+    @keyframes ant-listen { 0%,100%{opacity:1;} 50%{opacity:0;} }
 
-    /* ── State: thinking ──────────────────────────────── */
-    .s-thinking .pupil      { animation: look-around 1.6s ease-in-out infinite; }
-    .s-thinking .idle-line  { opacity: 1; }
-    .s-thinking .mouth-bar  { transform: scaleY(0.18); }
-    .s-thinking .eyelid     { animation: squint 1.6s ease-in-out infinite; }
+    /* ── Thinking ────────────────────────────────────── */
+    .s-thinking .pupil      { animation: pupils-think 1.8s ease-in-out infinite; }
+    .s-thinking .eyelid     { animation: squint 1.8s ease-in-out infinite; }
+    .s-thinking .mouth-bar  { transform: scaleY(0.15); }
+    .s-thinking .idle-mouth { opacity: 1; }
 
-    @keyframes look-around {
-      0%,100% { transform: translate(0,0); }
-      25%     { transform: translate(-6px,-5px); }
-      75%     { transform: translate(6px,-5px); }
+    @keyframes pupils-think {
+      0%,100% { transform:translate(0,0); }
+      30%     { transform:translate(-7px,-6px); }
+      70%     { transform:translate(7px,-4px); }
     }
     @keyframes squint {
-      0%,100% { transform: scaleY(0.35); }
-      50%     { transform: scaleY(0.45); }
+      0%,100% { transform:scaleY(0.38); }
+      50%     { transform:scaleY(0.48); }
     }
 
-    /* ── State: speaking ──────────────────────────────── */
-    .s-speaking .idle-line  { opacity: 0; }
-    .s-speaking .mouth-bar  { animation: bar-bounce var(--dur, 0.4s) ease-in-out infinite alternate; }
-    .s-speaking .mouth-bar:nth-child(1) { --dur: 0.38s; animation-delay: 0.00s; }
-    .s-speaking .mouth-bar:nth-child(2) { --dur: 0.28s; animation-delay: 0.06s; }
-    .s-speaking .mouth-bar:nth-child(3) { --dur: 0.44s; animation-delay: 0.02s; }
-    .s-speaking .mouth-bar:nth-child(4) { --dur: 0.32s; animation-delay: 0.10s; }
-    .s-speaking .mouth-bar:nth-child(5) { --dur: 0.41s; animation-delay: 0.04s; }
-    .s-speaking .mouth-bar:nth-child(6) { --dur: 0.26s; animation-delay: 0.08s; }
-    .s-speaking .mouth-bar:nth-child(7) { --dur: 0.36s; animation-delay: 0.12s; }
-    .s-speaking .eyelid     { transform: scaleY(0); }
+    /* ── Speaking ────────────────────────────────────── */
+    .s-speaking .idle-mouth { opacity: 0; }
+    .s-speaking .mouth-bar  { animation: bar var(--d,0.4s) ease-in-out infinite alternate; }
+    .s-speaking .mouth-bar:nth-child(1){--d:0.36s;animation-delay:0.00s;}
+    .s-speaking .mouth-bar:nth-child(2){--d:0.27s;animation-delay:0.06s;}
+    .s-speaking .mouth-bar:nth-child(3){--d:0.43s;animation-delay:0.02s;}
+    .s-speaking .mouth-bar:nth-child(4){--d:0.31s;animation-delay:0.10s;}
+    .s-speaking .mouth-bar:nth-child(5){--d:0.39s;animation-delay:0.04s;}
+    .s-speaking .mouth-bar:nth-child(6){--d:0.25s;animation-delay:0.08s;}
+    .s-speaking .mouth-bar:nth-child(7){--d:0.34s;animation-delay:0.12s;}
 
-    @keyframes bar-bounce {
-      from { transform: scaleY(0.2); }
-      to   { transform: scaleY(1.0); }
+    @keyframes bar {
+      from { transform:scaleY(0.15); }
+      to   { transform:scaleY(1.0); }
     }
 
-    /* ── UI chrome ────────────────────────────────────── */
+    /* ── UI chrome ───────────────────────────────────── */
     #status {
-      margin-top: 20px;
-      font-size: 0.8rem;
-      letter-spacing: 0.2em;
+      margin-top: 16px;
+      font-size: 0.75rem;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
-      opacity: 0.5;
+      opacity: 0.45;
     }
-
     #talk-btn {
       margin-top: 20px;
-      padding: 14px 48px;
+      padding: 14px 52px;
       border-radius: 999px;
-      border: 2px solid #4df0ff;
+      border: 2px solid #4d9fff;
       background: transparent;
-      color: #4df0ff;
+      color: #4d9fff;
       font-family: inherit;
-      font-size: 0.95rem;
-      letter-spacing: 0.12em;
+      font-size: 0.9rem;
+      letter-spacing: 0.14em;
       cursor: pointer;
       transition: background 0.15s, color 0.15s, box-shadow 0.15s;
     }
-    #talk-btn:not(:disabled):hover  { box-shadow: 0 0 18px rgba(77,240,255,0.4); }
-    #talk-btn.recording             { background: #4df0ff; color: #08090f; }
-    #talk-btn:disabled              { opacity: 0.25; cursor: default; }
+    #talk-btn:not(:disabled):hover { box-shadow: 0 0 20px rgba(77,159,255,0.4); }
+    #talk-btn.recording            { background: #4d9fff; color: #070b14; }
+    #talk-btn:disabled             { opacity: 0.22; cursor: default; }
   </style>
 </head>
 <body>
 
-<svg id="face" viewBox="0 0 300 320" xmlns="http://www.w3.org/2000/svg" class="s-idle">
+<svg id="face" viewBox="0 0 300 350" xmlns="http://www.w3.org/2000/svg" class="s-idle">
   <defs>
-    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="#fff"/>
-      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
-    </linearGradient>
+    <radialGradient id="head-grad" cx="42%" cy="35%" r="60%">
+      <stop offset="0%"   stop-color="#1e3f7a"/>
+      <stop offset="100%" stop-color="#0b1a35"/>
+    </radialGradient>
   </defs>
 
   <!-- Antenna -->
-  <line class="antenna" x1="150" y1="60" x2="150" y2="28"/>
-  <circle class="antenna-ball" cx="150" cy="20" r="7"/>
+  <line class="antenna-stem" x1="150" y1="72" x2="150" y2="36"/>
+  <circle class="antenna-ball" cx="150" cy="27" r="9"/>
 
-  <!-- Head -->
-  <rect class="head" x="45" y="60" width="210" height="210" rx="28"/>
-  <rect class="head-shine" x="45" y="60" width="210" height="105" rx="28"/>
+  <!-- Round head -->
+  <circle class="head" cx="150" cy="192" r="122"/>
 
-  <!-- Panel lines (detail) -->
-  <line class="panel-line" x1="45" y1="220" x2="255" y2="220"/>
-  <line class="panel-line" x1="150" y1="220" x2="150" y2="270"/>
+  <!-- Ear discs -->
+  <circle class="ear" cx="28"  cy="192" r="14"/>
+  <circle class="ear" cx="272" cy="192" r="14"/>
+  <!-- Ear inner bolts -->
+  <circle cx="28"  cy="192" r="5" fill="#4d9fff" opacity="0.6"/>
+  <circle cx="272" cy="192" r="5" fill="#4d9fff" opacity="0.6"/>
 
-  <!-- Ears -->
-  <rect class="ear" x="22" y="120" width="23" height="38" rx="8"/>
-  <rect class="ear" x="255" y="120" width="23" height="38" rx="8"/>
+  <!-- ── Left eye (screen) ── -->
+  <rect class="eye-frame" x="64" y="138" width="74" height="62" rx="12"/>
+  <!-- iris glow layer -->
+  <circle class="iris"  cx="101" cy="169" r="18"/>
+  <!-- pupil -->
+  <circle class="pupil" cx="101" cy="169" r="11"/>
+  <!-- highlight -->
+  <circle class="eye-shine" cx="109" cy="160" r="5"/>
+  <!-- eyelid (covers eye for blink/squint) -->
+  <rect class="eyelid" x="64" y="138" width="74" height="62" rx="12"/>
 
-  <!-- Left eye -->
-  <rect class="eye-bg" x="68" y="102" width="72" height="60" rx="14"/>
-  <circle class="iris"  cx="104" cy="132" r="18"/>
-  <circle class="pupil" cx="104" cy="132" r="11"/>
-  <circle class="shine" cx="111" cy="124" r="4.5"/>
-  <rect class="eyelid"  x="68"  y="102" width="72" height="60" rx="14"/>
+  <!-- ── Right eye (screen) ── -->
+  <rect class="eye-frame" x="162" y="138" width="74" height="62" rx="12"/>
+  <circle class="iris"  cx="199" cy="169" r="18"/>
+  <circle class="pupil" cx="199" cy="169" r="11"/>
+  <circle class="eye-shine" cx="207" cy="160" r="5"/>
+  <rect class="eyelid" x="162" y="138" width="74" height="62" rx="12"/>
 
-  <!-- Right eye -->
-  <rect class="eye-bg" x="160" y="102" width="72" height="60" rx="14"/>
-  <circle class="iris"  cx="196" cy="132" r="18"/>
-  <circle class="pupil" cx="196" cy="132" r="11"/>
-  <circle class="shine" cx="203" cy="124" r="4.5"/>
-  <rect class="eyelid"  x="160" y="102" width="72" height="60" rx="14"/>
-
-  <!-- Mouth -->
-  <rect class="mouth-bg" x="82" y="196" width="136" height="46" rx="10"/>
-  <line class="idle-line" x1="96" y1="219" x2="204" y2="219"/>
+  <!-- ── Mouth ── -->
+  <rect class="mouth-frame" x="85" y="226" width="130" height="50" rx="12"/>
+  <!-- idle flat line -->
+  <line class="idle-mouth" x1="99" y1="251" x2="201" y2="251"/>
+  <!-- speaking bars (7) -->
   <g>
-    <rect class="mouth-bar" x="96"  y="200" width="12" height="34" rx="3"/>
-    <rect class="mouth-bar" x="113" y="200" width="12" height="34" rx="3"/>
-    <rect class="mouth-bar" x="130" y="200" width="12" height="34" rx="3"/>
-    <rect class="mouth-bar" x="147" y="200" width="12" height="34" rx="3"/>
-    <rect class="mouth-bar" x="164" y="200" width="12" height="34" rx="3"/>
-    <rect class="mouth-bar" x="181" y="200" width="12" height="34" rx="3"/>
-    <rect class="mouth-bar" x="198" y="200" width="12" height="34" rx="3"/>
+    <rect class="mouth-bar" x="99"  y="230" width="11" height="38" rx="3"/>
+    <rect class="mouth-bar" x="114" y="230" width="11" height="38" rx="3"/>
+    <rect class="mouth-bar" x="129" y="230" width="11" height="38" rx="3"/>
+    <rect class="mouth-bar" x="144" y="230" width="11" height="38" rx="3"/>
+    <rect class="mouth-bar" x="159" y="230" width="11" height="38" rx="3"/>
+    <rect class="mouth-bar" x="174" y="230" width="11" height="38" rx="3"/>
+    <rect class="mouth-bar" x="189" y="230" width="11" height="38" rx="3"/>
   </g>
 </svg>
 
@@ -200,20 +188,16 @@
 <button id="talk-btn" disabled>Hold to Talk</button>
 
 <script>
-  const face    = document.getElementById('face');
+  const face     = document.getElementById('face');
   const statusEl = document.getElementById('status');
-  const btn     = document.getElementById('talk-btn');
+  const btn      = document.getElementById('talk-btn');
 
-  function setState(state) {
-    face.className = 's-' + state;
-    statusEl.textContent = state;
-  }
+  function setState(s) { face.className = 's-' + s; statusEl.textContent = s; }
 
-  const ws = new WebSocket(`ws://${location.host}/ws`);
-  let mediaRecorder = null;
-  let audioChunks   = [];
-  const audioCtx    = new (window.AudioContext || window.webkitAudioContext)();
-  let audioQueue    = Promise.resolve();
+  const ws       = new WebSocket(`ws://${location.host}/ws`);
+  let mediaRecorder = null, audioChunks = [];
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let audioQueue = Promise.resolve();
 
   function queueAudio(b64) {
     audioQueue = audioQueue.then(async () => {
@@ -222,16 +206,15 @@
       const src    = audioCtx.createBufferSource();
       src.buffer   = buffer;
       src.connect(audioCtx.destination);
-      return new Promise(resolve => { src.onended = resolve; src.start(0); });
+      return new Promise(r => { src.onended = r; src.start(0); });
     });
   }
 
   ws.onopen  = () => { setState('idle'); btn.disabled = false; };
-  ws.onclose = () => { statusEl.textContent = 'Disconnected'; btn.disabled = true; };
-
+  ws.onclose = () => { statusEl.textContent = 'disconnected'; btn.disabled = true; };
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
-    if (msg.type === 'state') setState(msg.state);
+    if      (msg.type === 'state') setState(msg.state);
     else if (msg.type === 'audio') queueAudio(msg.data);
     else if (msg.type === 'speak') speechSynthesis.speak(new SpeechSynthesisUtterance(msg.text));
   };
@@ -244,8 +227,8 @@
   async function startRecording() {
     if (audioCtx.state === 'suspended') await audioCtx.resume();
     btn.classList.add('recording');
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioChunks  = [];
+    const stream  = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks   = [];
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
     mediaRecorder.onstop = sendAudio;
