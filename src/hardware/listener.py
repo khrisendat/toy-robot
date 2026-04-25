@@ -24,7 +24,7 @@ class Listener:
         self.pa = pyaudio.PyAudio()
         self.vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
 
-    def listen(self, duration=5):
+    def listen(self, duration=8):
         logger.info("Listening for command...")
 
         stream = self.pa.open(
