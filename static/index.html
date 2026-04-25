@@ -197,16 +197,21 @@
   const ws       = new WebSocket(`ws://${location.host}/ws`);
   let mediaRecorder = null, audioChunks = [];
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  let audioQueue = Promise.resolve();
+  let audioQueue   = Promise.resolve();
+  let pendingAudio = 0;
 
   function queueAudio(b64) {
+    pendingAudio++;
+    setState('speaking');
     audioQueue = audioQueue.then(async () => {
       const bytes  = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
       const buffer = await audioCtx.decodeAudioData(bytes.buffer.slice());
       const src    = audioCtx.createBufferSource();
       src.buffer   = buffer;
       src.connect(audioCtx.destination);
-      return new Promise(r => { src.onended = r; src.start(0); });
+      await new Promise(r => { src.onended = r; src.start(0); });
+      pendingAudio--;
+      if (pendingAudio === 0) setState('idle');
     });
   }
 
@@ -214,9 +219,14 @@
   ws.onclose = () => { statusEl.textContent = 'disconnected'; btn.disabled = true; };
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
-    if      (msg.type === 'state') setState(msg.state);
-    else if (msg.type === 'audio') queueAudio(msg.data);
-    else if (msg.type === 'speak') speechSynthesis.speak(new SpeechSynthesisUtterance(msg.text));
+    if (msg.type === 'state') {
+      // browser owns speaking/idle — only accept thinking/listening from server
+      if (msg.state !== 'speaking' && msg.state !== 'idle') setState(msg.state);
+    } else if (msg.type === 'audio') {
+      queueAudio(msg.data);
+    } else if (msg.type === 'speak') {
+      speechSynthesis.speak(new SpeechSynthesisUtterance(msg.text));
+    }
   };
 
   btn.addEventListener('mousedown',  startRecording);
