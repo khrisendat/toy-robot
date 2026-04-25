@@ -85,10 +85,13 @@ class TestSearch:
 
 
 class TestStore:
-    def test_formats_text_as_child_robot(self, store):
+    def test_formats_text_with_default_labels(self, store):
         store.store("I like trucks", "Me too!")
-        text = store._entries[0]["text"]
-        assert text == "Child: I like trucks Robot: Me too!"
+        assert store._entries[0]["text"] == "User: I like trucks Assistant: Me too!"
+
+    def test_formats_text_with_custom_labels(self, store):
+        store.store("I like trucks", "Me too!", user_label="Child", assistant_label="Robot")
+        assert store._entries[0]["text"] == "Child: I like trucks Robot: Me too!"
 
     def test_appends_entry(self, store):
         store.store("I like trucks", "Cool!")

@@ -42,9 +42,9 @@ class MemoryStore:
         top_indices = top_indices[np.argsort(scores[top_indices])[::-1]]
         return [self._entries[i]["text"] for i in top_indices]
 
-    def store(self, user_text: str, robot_text: str) -> None:
+    def store(self, user_text: str, robot_text: str, user_label: str = "User", assistant_label: str = "Assistant") -> None:
         """Persist a conversation turn to memory."""
-        text = f"Child: {user_text} Robot: {robot_text}"
+        text = f"{user_label}: {user_text} {assistant_label}: {robot_text}"
         embedding = self._embed(text)
 
         entry = {

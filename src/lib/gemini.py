@@ -53,24 +53,38 @@ class GeminiClient:
             except (json.JSONDecodeError, KeyError, IndexError):
                 continue
 
-    def generate(self, contents: list, system_prompt: str) -> str:
+    def generate_turn(self, contents: list, system_prompt: str, tool_declarations=None) -> dict:
         """
-        Send a generateContent request and return the response text.
+        Send a generateContent request and return a dict with either:
+          {"text": "..."}  — normal text response
+          {"function_call": {"name": ..., "args": {...}, "id": ...}}  — tool invocation
+        """
+        body = {
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
+            "contents": contents,
+        }
+        if tool_declarations:
+            body["tools"] = [{"function_declarations": tool_declarations}]
 
-        contents: list of {"role": ..., "parts": [...]} dicts
-        Raises requests.Timeout or requests.HTTPError on failure.
-        """
         response = requests.post(
             self.url,
             headers={"x-goog-api-key": config.GEMINI_API_KEY},
-            json={
-                "systemInstruction": {"parts": [{"text": system_prompt}]},
-                "contents": contents,
-            },
+            json=body,
             timeout=self.timeout,
         )
         response.raise_for_status()
-        return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+        parts = response.json()["candidates"][0]["content"]["parts"]
+        for part in parts:
+            if "functionCall" in part:
+                fc = part["functionCall"]
+                return {"function_call": {"name": fc["name"], "args": fc.get("args", {}), "id": fc.get("id")}}
+            if "text" in part:
+                return {"text": part["text"]}
+        return {"text": ""}
+
+    def generate(self, contents: list, system_prompt: str) -> str:
+        """Send a generateContent request and return the response text."""
+        return self.generate_turn(contents, system_prompt).get("text", "")
 
     @staticmethod
     def encode_audio(audio_bytes: bytes) -> dict:

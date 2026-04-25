@@ -9,7 +9,7 @@ from src.hardware.camera import Camera
 from src.hardware.grayscale import GrayscaleSensor
 from src.hardware.wheels import Wheels
 from src.hardware.api import WakeWordDetector, Listener
-from src.services.conversation import ConversationManager
+from src.services.conversation import ConversationManager, CHILD_ROBOT_CONFIG
 from src.lib.memory import MemoryStore
 
 _log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
@@ -63,7 +63,7 @@ async def say(speaker, speech_lock, text):
 async def conversation_loop(speaker, head, wheels, camera, speech_lock, memory):
     wake_word = WakeWordDetector()
     listener = Listener()
-    llm = ConversationManager(memory=memory)
+    llm = ConversationManager(cfg=CHILD_ROBOT_CONFIG, memory=memory)
 
     while True:
         # Wait for wake word
@@ -89,8 +89,8 @@ async def conversation_loop(speaker, head, wheels, camera, speech_lock, memory):
             continue
 
         # Stream LLM response sentence by sentence while speaking
-        def store_turn(user_text, robot_text):
-            asyncio.create_task(run(memory.store, user_text, robot_text))
+        def store_turn(user_text, robot_text, user_label, assistant_label):
+            asyncio.create_task(run(memory.store, user_text, robot_text, user_label, assistant_label))
 
         loop = asyncio.get_running_loop()
         sentence_queue = asyncio.Queue()
@@ -144,7 +144,7 @@ async def safety_monitor(speaker, grayscale, speech_lock):
                 logger.warning(f"[Safety] Cliff detected! Readings: {values}")
                 if loop.time() - last_cliff_warned >= CLIFF_WARN_COOLDOWN:
                     await say(speaker, speech_lock,
-                              f"Whoa! I'm going to fall! {config.CHILD_NAME}, can you save me?")
+                              f"Whoa! I'm going to fall! {config.USER_NAME}, can you save me?")
                     last_cliff_warned = loop.time()
 
 
@@ -158,7 +158,7 @@ async def main():
     speech_lock = asyncio.Lock()
 
     logger.info("Starting robot...")
-    await say(speaker, speech_lock, f"Hey {config.CHILD_NAME}! I'm awake!")
+    await say(speaker, speech_lock, f"Hey {config.USER_NAME}! I'm awake!")
 
     try:
         await asyncio.gather(

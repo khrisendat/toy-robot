@@ -17,6 +17,7 @@ SERVICE_ACCOUNT_KEY = "service-account-key.json"
 _device_index = os.getenv("AUDIO_INPUT_DEVICE_INDEX")
 AUDIO_INPUT_DEVICE_INDEX = int(_device_index) if _device_index is not None else None
 
-# Child's name — used in speech and prompts
-CHILD_NAME = os.getenv("CHILD_NAME", "Kabir")
+USER_NAME = os.getenv("USER_NAME", "Kabir")
+
+BRAVE_API_KEY = os.getenv("BRAVE_API_KEY")
 

@@ -6,7 +6,8 @@ from src import config
 from src.hardware.macos_speaker import MacOSSpeaker
 from src.hardware.wake_word import WakeWordDetector
 from src.hardware.macos_listener import MacOSListener
-from src.services.conversation import ConversationManager
+from src.services.conversation import ConversationManager, CHILD_ROBOT_CONFIG
+import src.services.tools  # registers tools into configs
 from src.lib.memory import MemoryStore
 
 _log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
@@ -50,7 +51,7 @@ async def say(speaker, speech_lock, text):
 async def conversation_loop(speaker, speech_lock, memory):
     wake_word = WakeWordDetector()
     listener = MacOSListener()
-    llm = ConversationManager(memory=memory)
+    llm = ConversationManager(cfg=CHILD_ROBOT_CONFIG, memory=memory)
 
     while True:
         await run(wake_word.wait_for_wake_word)
@@ -67,8 +68,8 @@ async def conversation_loop(speaker, speech_lock, memory):
             logger.warning("No command heard after 3 attempts. Going back to wake word.")
             continue
 
-        def store_turn(user_text, robot_text):
-            memory.store(user_text, robot_text)
+        def store_turn(user_text, robot_text, user_label, assistant_label):
+            memory.store(user_text, robot_text, user_label, assistant_label)
 
         loop = asyncio.get_running_loop()
         sentence_queue = asyncio.Queue()
@@ -95,7 +96,7 @@ async def main():
     speech_lock = asyncio.Lock()
 
     logger.info("Starting macOS conversation...")
-    await say(speaker, speech_lock, f"Hey {config.CHILD_NAME}! I'm awake!")
+    await say(speaker, speech_lock, f"Hey {config.USER_NAME}! I'm awake!")
 
     try:
         await conversation_loop(speaker, speech_lock, memory)
