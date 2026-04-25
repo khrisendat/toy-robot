@@ -21,7 +21,7 @@ class GeminiClient:
         self.timeout = timeout
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
-    def generate_stream(self, contents: list, system_prompt: str, tool_declarations=None, tool_config=None):
+    def generate_stream(self, contents: list, system_prompt: str, tool_declarations=None, tool_config=None, thinking_budget: int = -1):
         """Yield text chunks (str) or a function call dict from the streaming endpoint.
 
         When tool_declarations are provided, yields either:
@@ -35,7 +35,7 @@ class GeminiClient:
         body = {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": contents,
-            "generationConfig": {"thinkingConfig": {"thinkingBudget": 512}},
+            "generationConfig": {"thinkingConfig": {"thinkingBudget": thinking_budget}},
         }
         if tool_declarations:
             body["tools"] = [{"function_declarations": tool_declarations}]
@@ -70,7 +70,7 @@ class GeminiClient:
             except (json.JSONDecodeError, KeyError, IndexError):
                 continue
 
-    def generate_turn(self, contents: list, system_prompt: str, tool_declarations=None, tool_config=None) -> dict:
+    def generate_turn(self, contents: list, system_prompt: str, tool_declarations=None, tool_config=None, thinking_budget: int = -1) -> dict:
         """
         Send a generateContent request and return a dict with either:
           {"text": "..."}  — normal text response
@@ -79,7 +79,7 @@ class GeminiClient:
         body = {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": contents,
-            "generationConfig": {"thinkingConfig": {"thinkingBudget": 512}},
+            "generationConfig": {"thinkingConfig": {"thinkingBudget": thinking_budget}},
         }
         if tool_declarations:
             body["tools"] = [{"function_declarations": tool_declarations}]

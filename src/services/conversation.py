@@ -38,6 +38,7 @@ class ConversationConfig:
     user_label: str = "User"
     assistant_label: str = "Assistant"
     tools: list = field(default_factory=list)  # list[Tool]
+    thinking_budget: int = -1  # -1 = dynamic, 0 = disabled, 1-24576 = fixed cap
 
 
 CHILD_ROBOT_CONFIG = ConversationConfig(
@@ -57,6 +58,7 @@ CHILD_ROBOT_CONFIG = ConversationConfig(
     ),
     user_label="Child",
     assistant_label="Robot",
+    thinking_budget=512,
 )
 
 PERSONAL_ASSISTANT_CONFIG = ConversationConfig(
@@ -133,7 +135,7 @@ class ConversationManager:
                 buffer = ""
                 function_call = None
 
-                for chunk in self._client.generate_stream(current_contents, system_prompt, declarations):
+                for chunk in self._client.generate_stream(current_contents, system_prompt, declarations, thinking_budget=self._cfg.thinking_budget):
                     if isinstance(chunk, dict):
                         function_call = chunk["function_call"]
                         break
@@ -239,7 +241,7 @@ class ConversationManager:
         tool_turns = []
 
         for _ in range(5):
-            result = self._client.generate_turn(contents, system_prompt, declarations)
+            result = self._client.generate_turn(contents, system_prompt, declarations, thinking_budget=self._cfg.thinking_budget)
 
             if "text" in result:
                 return result["text"], tool_turns
