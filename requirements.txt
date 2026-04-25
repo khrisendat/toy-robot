@@ -1,3 +1,5 @@
+fastapi
+uvicorn[standard]
 py-trees
 google-genai
 vosk

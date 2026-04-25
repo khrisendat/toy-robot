@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robot</title>
+  <style>
+    body { margin: 0; background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; color: #fff; }
+    #status { margin-top: 24px; font-size: 1.2rem; opacity: 0.7; letter-spacing: 0.05em; text-transform: uppercase; }
+    #talk-btn { margin-top: 32px; padding: 16px 48px; font-size: 1.1rem; border-radius: 999px; border: none; background: #4f8ef7; color: #fff; cursor: pointer; transition: background 0.2s; }
+    #talk-btn:active { background: #2563eb; }
+    #talk-btn:disabled { background: #555; cursor: default; }
+    #face { font-size: 6rem; }
+  </style>
+</head>
+<body>
+  <div id="face">🤖</div>
+  <div id="status">Connecting…</div>
+  <button id="talk-btn" disabled>Hold to Talk</button>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const btn = document.getElementById('talk-btn');
+    const faceEl = document.getElementById('face');
+
+    const ws = new WebSocket(`ws://${location.host}/ws`);
+    let mediaRecorder = null;
+    let audioChunks = [];
+
+    ws.onopen = () => { statusEl.textContent = 'Idle'; btn.disabled = false; };
+    ws.onclose = () => { statusEl.textContent = 'Disconnected'; btn.disabled = true; };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'state') {
+        statusEl.textContent = msg.state;
+      } else if (msg.type === 'speak') {
+        const u = new SpeechSynthesisUtterance(msg.text);
+        speechSynthesis.speak(u);
+      }
+    };
+
+    btn.addEventListener('mousedown', startRecording);
+    btn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
+    btn.addEventListener('mouseup', stopRecording);
+    btn.addEventListener('touchend', stopRecording);
+
+    async function startRecording() {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      mediaRecorder.onstop = sendAudio;
+      mediaRecorder.start();
+      statusEl.textContent = 'Listening…';
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    }
+
+    async function sendAudio() {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      const buffer = await blob.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      ws.send(JSON.stringify({ type: 'audio', data: b64 }));
+    }
+  </script>
+</body>
+</html>
