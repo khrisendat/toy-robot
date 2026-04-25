@@ -16,24 +16,34 @@ logger = logging.getLogger(__name__)
 
 
 class GeminiClient:
-    def __init__(self, model: str = "gemini-2.5-flash-lite", timeout: int = 30):
+    def __init__(self, model: str = "gemini-2.0-flash", timeout: int = 30):
         self.model = model
         self.timeout = timeout
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
-    def generate_stream(self, contents: list, system_prompt: str):
-        """Yield text chunks as they arrive from the streaming endpoint."""
+    def generate_stream(self, contents: list, system_prompt: str, tool_declarations=None, tool_config=None):
+        """Yield text chunks (str) or a function call dict from the streaming endpoint.
+
+        When tool_declarations are provided, yields either:
+          str  — a text chunk to speak
+          dict — {"function_call": {"name": ..., "args": {...}, "id": ...}}
+        """
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models"
             f"/{self.model}:streamGenerateContent?alt=sse"
         )
+        body = {
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
+            "contents": contents,
+        }
+        if tool_declarations:
+            body["tools"] = [{"function_declarations": tool_declarations}]
+        if tool_config:
+            body["toolConfig"] = tool_config
         response = requests.post(
             url,
             headers={"x-goog-api-key": config.GEMINI_API_KEY},
-            json={
-                "systemInstruction": {"parts": [{"text": system_prompt}]},
-                "contents": contents,
-            },
+            json=body,
             stream=True,
             timeout=self.timeout,
         )
@@ -47,13 +57,17 @@ class GeminiClient:
                 continue
             try:
                 data = json.loads(line[6:])
-                text = data["candidates"][0]["content"]["parts"][0]["text"]
-                if text:
-                    yield text
+                parts = data["candidates"][0]["content"]["parts"]
+                for part in parts:
+                    if "functionCall" in part:
+                        fc = part["functionCall"]
+                        yield {"function_call": {"name": fc["name"], "args": fc.get("args", {}), "id": fc.get("id")}}
+                    elif "text" in part and part["text"]:
+                        yield part["text"]
             except (json.JSONDecodeError, KeyError, IndexError):
                 continue
 
-    def generate_turn(self, contents: list, system_prompt: str, tool_declarations=None) -> dict:
+    def generate_turn(self, contents: list, system_prompt: str, tool_declarations=None, tool_config=None) -> dict:
         """
         Send a generateContent request and return a dict with either:
           {"text": "..."}  — normal text response
@@ -65,6 +79,8 @@ class GeminiClient:
         }
         if tool_declarations:
             body["tools"] = [{"function_declarations": tool_declarations}]
+        if tool_config:
+            body["toolConfig"] = tool_config
 
         response = requests.post(
             self.url,

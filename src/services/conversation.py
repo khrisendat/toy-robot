@@ -1,8 +1,9 @@
+import base64
 import logging
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Callable
 from .. import config
 from ..lib.gemini import GeminiClient
 
@@ -34,8 +35,6 @@ class Tool:
 class ConversationConfig:
     system_prompt: str
     audio_instruction: str = "Respond to the user."
-    vision_signal: Optional[str] = None
-    vision_instruction: str = "Describe what you see in this image."
     user_label: str = "User"
     assistant_label: str = "Assistant"
     tools: list = field(default_factory=list)  # list[Tool]
@@ -48,12 +47,13 @@ CHILD_ROBOT_CONFIG = ConversationConfig(
         "Do not use emojis, asterisks, bullet points, or any special characters — only plain spoken words. "
         "Vary your tone and energy to keep things fun and surprising. "
         "About half the time, end your response with a simple, playful follow-up question to keep the conversation going. "
-        "If the user asks you to look at something or describe what you see, respond with exactly 'NEED_CAMERA' and nothing else. "
+        "You have a capture_image tool — you MUST call it whenever asked to look at something, describe what you see, or identify an object. Never pretend to look or guess; always call the tool first. "
         "You have a web_search tool available. You MUST call it for any question about current events, news, weather, movies, sports scores, or anything that changes over time — do not guess or say you don't know, search first."
     ),
-    audio_instruction="Respond to what the child said.",
-    vision_signal="NEED_CAMERA",
-    vision_instruction="Describe what you see in this image to the child in one or two fun sentences.",
+    audio_instruction=(
+        "Respond to what the child said. "
+        "IMPORTANT: If they ask you to look at, see, or identify anything, call the capture_image tool immediately — do not describe what you will do, just call it."
+    ),
     user_label="Child",
     assistant_label="Robot",
 )
@@ -79,12 +79,11 @@ class ConversationManager:
         self._history = []  # list of {"role": ..., "parts": [...]} dicts (text only)
         self.memory = memory
 
-    def generate_response(self, audio_data, get_image=None, store_memory=None):
+    def generate_response(self, audio_data, store_memory=None):
         """
         Generate a response for the given input.
 
         audio_data:   bytes (WAV) for real mic input, or str for mock/text input
-        get_image:    optional callable() → bytes — invoked when the model requests vision
         store_memory: optional callable(user_text, robot_text, user_label, assistant_label)
         """
         logger.info(f"Sending to LLM ({self._client.model})...")
@@ -95,23 +94,6 @@ class ConversationManager:
 
         try:
             text, tool_turns = self._call(user_parts, system_prompt)
-
-            if self._cfg.vision_signal and text.strip() == self._cfg.vision_signal and get_image is not None:
-                logger.info("Vision requested — capturing image.")
-                image_data = get_image()
-                if image_data:
-                    vision_parts = [
-                        self._client.encode_image(image_data),
-                        {"text": self._cfg.vision_instruction},
-                    ]
-                    text = self._call(vision_parts, system_prompt)
-                    history_text = "[asked to look]"
-                else:
-                    text = "I tried to look but my camera isn't working right now!"
-                    history_text = "[camera failed]"
-
-            if self._cfg.vision_signal and text.strip() == self._cfg.vision_signal:
-                text = "I tried to look but I couldn't quite see. Can you describe it to me?"
 
             self._history.append({"role": "user", "parts": [{"text": history_text}]})
             self._history.extend(tool_turns)
@@ -132,7 +114,7 @@ class ConversationManager:
             logger.error(f"LLM error after {elapsed:.2f}s: {e}")
             return "I'm sorry, I'm having a little trouble thinking right now."
 
-    def generate_response_stream(self, audio_data, get_image=None, store_memory=None):
+    def generate_response_stream(self, audio_data, store_memory=None):
         """Yield sentences as they are generated."""
         user_parts, history_text = self._prepare_input(audio_data)
         system_prompt = self._build_system_prompt(history_text)
@@ -141,48 +123,33 @@ class ConversationManager:
         full_text = ""
         tool_turns = []
 
+        declarations = [t.declaration for t in self._cfg.tools] if self._cfg.tools else None
+        tool_map = {t.name: t.handler for t in self._cfg.tools} if self._cfg.tools else {}
+        current_contents = contents
+
         try:
-            if self._cfg.tools:
-                # Tool calls require multi-turn round-trips; collect full response then yield
-                full_text, tool_turns = self._run_tool_loop(contents, system_prompt)
-                sentences, leftover = _extract_sentences(full_text + " ")
-                for s in sentences:
-                    yield s
-                if leftover.strip():
-                    yield leftover.strip()
-            else:
+            for _ in range(6):  # up to 5 tool calls then a final text response
                 buffer = ""
-                for chunk in self._client.generate_stream(contents, system_prompt):
+                function_call = None
+
+                for chunk in self._client.generate_stream(current_contents, system_prompt, declarations):
+                    if isinstance(chunk, dict):
+                        function_call = chunk["function_call"]
+                        break
                     full_text += chunk
                     buffer += chunk
                     sentences, buffer = _extract_sentences(buffer)
                     for sentence in sentences:
                         yield sentence
 
-                remaining = buffer.strip()
-                if self._cfg.vision_signal and remaining == self._cfg.vision_signal:
-                    logger.info("Vision requested — capturing image.")
-                    if get_image is not None:
-                        image_data = get_image()
-                        if image_data:
-                            vision_parts = [
-                                self._client.encode_image(image_data),
-                                {"text": self._cfg.vision_instruction},
-                            ]
-                            full_text = self._client.generate(contents + [{"role": "user", "parts": vision_parts}], system_prompt)
-                            history_text = "[asked to look]"
-                        else:
-                            full_text = "I tried to look but my camera isn't working right now!"
-                            history_text = "[camera failed]"
-                    else:
-                        full_text = "I tried to look but I couldn't quite see. Can you describe it to me?"
-                    sentences, leftover = _extract_sentences(full_text + " ")
-                    for sentence in sentences:
-                        yield sentence
-                    if leftover.strip():
-                        yield leftover.strip()
-                elif remaining:
-                    yield remaining
+                if function_call is None:
+                    if buffer.strip():
+                        yield buffer.strip()
+                    break
+
+                model_turn, user_turn = self._execute_tool_call(function_call, tool_map)
+                tool_turns.extend([model_turn, user_turn])
+                current_contents = current_contents + [model_turn, user_turn]
 
         except Exception as e:
             elapsed = time.time() - start
@@ -219,15 +186,50 @@ class ConversationManager:
         return user_parts, history_text
 
     def _call(self, user_parts: list, system_prompt: str):
-        """Returns (text, tool_turns) where tool_turns is the list of intermediate
-        functionCall/functionResponse history entries produced during tool use."""
+        """Returns (text, tool_turns)."""
         contents = self._history + [{"role": "user", "parts": user_parts}]
         if not self._cfg.tools:
             return self._client.generate(contents, system_prompt), []
         return self._run_tool_loop(contents, system_prompt)
 
+    def _execute_tool_call(self, function_call: dict, tool_map: dict):
+        """Execute a tool call. Returns (model_turn, user_turn) for history.
+
+        If the handler returns {"__inline_data__": {"mimeType": ..., "data": bytes}},
+        the image is included as an inlineData part alongside the functionResponse so
+        the model can process it visually.
+        """
+        name, args, call_id = function_call["name"], function_call["args"], function_call.get("id")
+        logger.info(f"Tool call: {name}({args})")
+
+        handler = tool_map.get(name)
+        try:
+            tool_result = handler(**args) if handler else {"error": f"Unknown tool: {name}"}
+            if not isinstance(tool_result, dict):
+                tool_result = {"result": str(tool_result)}
+        except Exception as e:
+            tool_result = {"error": str(e)}
+
+        inline_data = tool_result.pop("__inline_data__", None)
+        logger.info(f"Tool result: {tool_result}")
+
+        fc_part = {"functionCall": {"name": name, "args": args}}
+        fr_part = {"functionResponse": {"name": name, "response": tool_result or {"status": "done"}}}
+        if call_id:
+            fc_part["functionCall"]["id"] = call_id
+            fr_part["functionResponse"]["id"] = call_id
+
+        user_parts = [fr_part]
+        if inline_data:
+            data = inline_data["data"]
+            if isinstance(data, bytes):
+                data = base64.b64encode(data).decode()
+            user_parts.append({"inlineData": {"mimeType": inline_data["mimeType"], "data": data}})
+
+        return {"role": "model", "parts": [fc_part]}, {"role": "user", "parts": user_parts}
+
     def _run_tool_loop(self, contents: list, system_prompt: str):
-        """Execute the tool-call loop. Returns (final_text, tool_turns)."""
+        """Execute the tool-call loop (non-streaming). Returns (final_text, tool_turns)."""
         declarations = [t.declaration for t in self._cfg.tools]
         tool_map = {t.name: t.handler for t in self._cfg.tools}
         tool_turns = []
@@ -238,27 +240,7 @@ class ConversationManager:
             if "text" in result:
                 return result["text"], tool_turns
 
-            call = result["function_call"]
-            name, args, call_id = call["name"], call["args"], call.get("id")
-            logger.info(f"Tool call: {name}({args})")
-
-            handler = tool_map.get(name)
-            try:
-                tool_result = handler(**args) if handler else {"error": f"Unknown tool: {name}"}
-                if not isinstance(tool_result, dict):
-                    tool_result = {"result": str(tool_result)}
-            except Exception as e:
-                tool_result = {"error": str(e)}
-            logger.info(f"Tool result: {tool_result}")
-
-            fc_part = {"functionCall": {"name": name, "args": args}}
-            fr_part = {"functionResponse": {"name": name, "response": tool_result}}
-            if call_id:
-                fc_part["functionCall"]["id"] = call_id
-                fr_part["functionResponse"]["id"] = call_id
-
-            model_turn = {"role": "model", "parts": [fc_part]}
-            user_turn = {"role": "user", "parts": [fr_part]}
+            model_turn, user_turn = self._execute_tool_call(result["function_call"], tool_map)
             tool_turns.extend([model_turn, user_turn])
             contents = contents + [model_turn, user_turn]
 
