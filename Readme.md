@@ -15,7 +15,8 @@ Adding new capabilities (movement, expressions, etc.) means adding a new task to
 
 | Path | What it does |
 |---|---|
-| `main.py` | Async orchestration — conversation loop, safety monitor |
+| `scripts/main_pi.py` | Pi entry point — conversation loop, safety monitor |
+| `scripts/main_mac.py` | macOS entry point — conversation loop only |
 | `src/hardware/speaker.py` | Piper TTS (persistent process, offline) |
 | `src/hardware/head.py` | Pan/tilt servo animations (idle, listening, speaking) |
 | `src/hardware/camera.py` | Pi Camera JPEG capture for vision requests |
@@ -92,7 +93,7 @@ sudo apt-get update && sudo apt-get install -y alsa-utils libportaudio-dev
 
 ```bash
 source venv/bin/activate
-python main.py
+python scripts/main_pi.py
 ```
 
 The robot will say "Hey Kabir! I'm awake!" and start listening for "hey robot".
