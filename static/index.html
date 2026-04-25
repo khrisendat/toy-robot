@@ -203,15 +203,24 @@
   function queueAudio(b64) {
     pendingAudio++;
     setState('speaking');
+    console.log('[audio] queued, pending=', pendingAudio);
     audioQueue = audioQueue.then(async () => {
-      const bytes  = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-      const buffer = await audioCtx.decodeAudioData(bytes.buffer.slice());
-      const src    = audioCtx.createBufferSource();
-      src.buffer   = buffer;
-      src.connect(audioCtx.destination);
-      await new Promise(r => { src.onended = r; src.start(0); });
-      pendingAudio--;
-      if (pendingAudio === 0) setState('idle');
+      try {
+        const bytes  = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        console.log('[audio] decoding', bytes.length, 'bytes');
+        const buffer = await audioCtx.decodeAudioData(bytes.buffer.slice());
+        const src    = audioCtx.createBufferSource();
+        src.buffer   = buffer;
+        src.connect(audioCtx.destination);
+        await new Promise(r => { src.onended = r; src.start(0); });
+        console.log('[audio] finished playing');
+      } catch(e) {
+        console.error('[audio] error:', e);
+      } finally {
+        pendingAudio--;
+        console.log('[audio] pending now=', pendingAudio);
+        if (pendingAudio === 0) setState('idle');
+      }
     });
   }
 
@@ -219,8 +228,8 @@
   ws.onclose = () => { statusEl.textContent = 'disconnected'; btn.disabled = true; };
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
+    console.log('[ws]', msg.type, msg.state ?? '');
     if (msg.type === 'state') {
-      // browser owns speaking/idle — only accept thinking/listening from server
       if (msg.state !== 'speaking' && msg.state !== 'idle') setState(msg.state);
     } else if (msg.type === 'audio') {
       queueAudio(msg.data);
