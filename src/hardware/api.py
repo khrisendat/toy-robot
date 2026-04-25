@@ -10,7 +10,10 @@ If no microphone is available, falls back to a text-based MockListener.
 import platform
 import pyaudio
 
-IS_PI = platform.machine().startswith("arm") or platform.machine().startswith("aarch64")
+IS_PI = (
+    platform.system() == "Linux"
+    and (platform.machine().startswith("arm") or platform.machine().startswith("aarch64"))
+)
 
 if IS_PI:
     print("Running on Raspberry Pi. Importing real hardware classes.")
@@ -37,6 +40,12 @@ def _is_microphone_available():
         return False
     finally:
         pa.terminate()
+
+
+if IS_PI:
+    from .camera import Camera
+else:
+    from .macos_camera import MacOSCamera as Camera
 
 
 if _is_microphone_available():

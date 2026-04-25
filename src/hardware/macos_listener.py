@@ -2,23 +2,25 @@ import io
 import logging
 import wave
 
-import numpy as np
 import pyaudio
+import webrtcvad
 
 logger = logging.getLogger(__name__)
 
 NATIVE_RATE = 48000
 TARGET_RATE = 16000
-CHUNK = 1024
-CHUNKS_PER_SECOND = int(NATIVE_RATE / CHUNK)
-SILENCE_RMS_THRESHOLD = 500
-TRAILING_SILENCE_CHUNKS = CHUNKS_PER_SECOND
-MIN_SPEECH_CHUNKS = CHUNKS_PER_SECOND
+# 960 samples = exactly 20ms at 48000Hz — required by webrtcvad
+CHUNK = 960
+CHUNKS_PER_SECOND = NATIVE_RATE // CHUNK           # 50 chunks/sec
+VAD_AGGRESSIVENESS = 2                              # 0 (permissive) – 3 (strict)
+MIN_SPEECH_CHUNKS = CHUNKS_PER_SECOND // 5         # 200ms of speech to confirm start
+TRAILING_SILENCE_CHUNKS = CHUNKS_PER_SECOND        # 1s of silence to stop
 
 
 class MacOSListener:
     def __init__(self):
         self.pa = pyaudio.PyAudio()
+        self.vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
 
     def listen(self, duration=5):
         logger.info("Listening for command...")
@@ -38,13 +40,12 @@ class MacOSListener:
         trailing_silent_chunks = 0
 
         for _ in range(total_chunks):
-            data = stream.read(CHUNK)
+            data = stream.read(CHUNK, exception_on_overflow=False)
             frames.append(data)
 
-            chunk_array = np.frombuffer(data, dtype=np.int16)
-            rms = np.sqrt(np.mean(chunk_array.astype(np.float32) ** 2))
+            is_speech = self.vad.is_speech(data, NATIVE_RATE)
 
-            if rms >= SILENCE_RMS_THRESHOLD:
+            if is_speech:
                 speech_started = True
                 speech_chunks += 1
                 trailing_silent_chunks = 0
@@ -66,6 +67,7 @@ class MacOSListener:
         return self._to_wav(frames)
 
     def _downsample(self, frames):
+        import numpy as np
         audio = np.frombuffer(b"".join(frames), dtype=np.int16).astype(np.float32)
         ratio = TARGET_RATE / NATIVE_RATE
         target_len = int(len(audio) * ratio)

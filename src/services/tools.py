@@ -124,7 +124,23 @@ web_search = Tool(
 )
 
 
-# Wire tools into presets.
+def make_camera_tool(get_image):
+    """Factory that returns a capture_image Tool bound to the given get_image callable."""
+    def _capture():
+        data = get_image()
+        if data is None:
+            return {"error": "Camera capture failed."}
+        return {"__inline_data__": {"mimeType": "image/jpeg", "data": data}}
+
+    return Tool(
+        name="capture_image",
+        description="Capture an image from the camera to see what is in front of you.",
+        parameters={"type": "object", "properties": {}},
+        handler=_capture,
+    )
+
+
+# Wire static tools into presets.
 from .conversation import CHILD_ROBOT_CONFIG, PERSONAL_ASSISTANT_CONFIG  # noqa: E402
 CHILD_ROBOT_CONFIG.tools = [web_search]
 PERSONAL_ASSISTANT_CONFIG.tools = [get_current_datetime, calculate, web_search]

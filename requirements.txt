@@ -2,6 +2,8 @@ py-trees
 google-genai
 vosk
 pyaudio
+opencv-python
+webrtcvad
 python-dotenv
 google-cloud-speech
 numpy
