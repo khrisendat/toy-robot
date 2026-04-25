@@ -9,178 +9,168 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #070b14;
+      background: #0c1222;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       font-family: 'Courier New', monospace;
-      color: #4d9fff;
+      color: #60a5fa;
       user-select: none;
     }
 
-    #face { width: min(80vw, 360px); height: auto; overflow: visible; }
+    #face { width: min(75vw, 300px); height: auto; overflow: visible; }
 
-    /* ── Base elements ───────────────────────────────── */
-    .head         { fill: url(#head-grad); stroke: #4d9fff; stroke-width: 2.5;
-                    filter: drop-shadow(0 0 18px rgba(77,159,255,0.25)); }
-    .ear          { fill: #0e2044; stroke: #4d9fff; stroke-width: 2; }
-    .antenna-stem { stroke: #4d9fff; stroke-width: 2.5; }
-    .antenna-ball { fill: #4d9fff; }
+    /* ── Idle ───────────────────────────────────────── */
+    .s-idle .antenna-ball  { animation: ant-pulse 2.5s ease-in-out infinite; }
+    .s-idle .eyelid        { animation: blink 4s ease-in-out infinite; }
+    .s-idle .mouth-bar     { transform: scaleY(0.12); }
+    .s-idle .idle-mouth    { opacity: 1; }
+    .s-idle .open-mouth    { opacity: 0; }
 
-    .eye-frame    { fill: #050d1a; stroke: #4d9fff; stroke-width: 2.5; }
-    .iris         { fill: #4d9fff; }
-    .pupil        { fill: #050d1a; }
-    .eye-shine    { fill: #fff; opacity: 0.55; }
-    /* Eyelid slides down to cover the eye on blink */
-    .eyelid       { fill: #122040; transform-box: fill-box; transform-origin: top center; transform: scaleY(0); }
+    /* ── Listening ──────────────────────────────────── */
+    .s-listening .eye-iris      { animation: iris-glow 0.6s ease-in-out infinite alternate; }
+    .s-listening .antenna-ball  { animation: ant-pulse 0.4s ease-in-out infinite; }
+    .s-listening .mouth-bar     { transform: scaleY(0.12); }
+    .s-listening .idle-mouth    { opacity: 1; }
+    .s-listening .open-mouth    { opacity: 0; }
 
-    .mouth-frame  { fill: #050d1a; stroke: #4d9fff; stroke-width: 2.5; }
-    .mouth-bar    { fill: #4d9fff; transform-box: fill-box; transform-origin: bottom center; }
-    .idle-mouth   { stroke: #4d9fff; stroke-width: 3; stroke-linecap: round; }
+    /* ── Thinking ───────────────────────────────────── */
+    .s-thinking .eye-pupil   { animation: look-around 1.6s ease-in-out infinite; }
+    .s-thinking .eyelid      { animation: squint 1.6s ease-in-out infinite; }
+    .s-thinking .mouth-bar   { transform: scaleY(0.12); }
+    .s-thinking .idle-mouth  { opacity: 1; }
+    .s-thinking .open-mouth  { opacity: 0; }
 
-    /* ── Idle ────────────────────────────────────────── */
-    .s-idle .antenna-ball { animation: ant-idle 3s ease-in-out infinite; }
-    .s-idle .eyelid       { animation: blink 5s ease-in-out infinite; }
-    .s-idle .mouth-bar    { transform: scaleY(0.15); }
-    .s-idle .idle-mouth   { opacity: 1; }
+    /* ── Speaking ───────────────────────────────────── */
+    .s-speaking .idle-mouth  { opacity: 0; }
+    .s-speaking .open-mouth  { opacity: 0; }
+    .s-speaking .mouth-bar   { animation: bar var(--d,.38s) ease-in-out infinite alternate; }
+    .s-speaking .mouth-bar:nth-child(1){--d:.35s;animation-delay:.00s}
+    .s-speaking .mouth-bar:nth-child(2){--d:.26s;animation-delay:.06s}
+    .s-speaking .mouth-bar:nth-child(3){--d:.42s;animation-delay:.02s}
+    .s-speaking .mouth-bar:nth-child(4){--d:.30s;animation-delay:.09s}
+    .s-speaking .mouth-bar:nth-child(5){--d:.38s;animation-delay:.04s}
 
-    @keyframes ant-idle {
-      0%,100% { opacity:1; } 50% { opacity:0.25; }
-    }
-    @keyframes blink {
-      0%,85%,100% { transform:scaleY(0); }
-      91%,96%     { transform:scaleY(1); }
-    }
+    /* ── Keyframes ──────────────────────────────────── */
+    @keyframes ant-pulse  { 0%,100%{opacity:1} 50%{opacity:.15} }
+    @keyframes blink      { 0%,82%,100%{transform:scaleY(0)} 88%,95%{transform:scaleY(1)} }
+    @keyframes squint     { 0%,100%{transform:scaleY(.4)} 50%{transform:scaleY(.5)} }
+    @keyframes iris-glow  { from{filter:drop-shadow(0 0 4px #38bdf8)} to{filter:drop-shadow(0 0 14px #38bdf8)} }
+    @keyframes look-around{ 0%,100%{transform:translate(0,0)} 30%{transform:translate(-7px,-5px)} 70%{transform:translate(7px,-3px)} }
+    @keyframes bar        { from{transform:scaleY(.12)} to{transform:scaleY(1)} }
 
-    /* ── Listening ───────────────────────────────────── */
-    .s-listening .eye-frame    { animation: eye-glow 0.7s ease-in-out infinite alternate; }
-    .s-listening .iris         { animation: iris-pop 0.25s ease forwards; }
-    .s-listening .antenna-ball { animation: ant-listen 0.5s ease-in-out infinite; }
-    .s-listening .mouth-bar    { transform: scaleY(0.15); }
-    .s-listening .idle-mouth   { opacity: 1; }
-
-    @keyframes eye-glow {
-      from { filter: drop-shadow(0 0 4px #4d9fff); }
-      to   { filter: drop-shadow(0 0 16px #4d9fff); }
-    }
-    @keyframes iris-pop { to { r: 21; } }
-    @keyframes ant-listen { 0%,100%{opacity:1;} 50%{opacity:0;} }
-
-    /* ── Thinking ────────────────────────────────────── */
-    .s-thinking .pupil      { animation: pupils-think 1.8s ease-in-out infinite; }
-    .s-thinking .eyelid     { animation: squint 1.8s ease-in-out infinite; }
-    .s-thinking .mouth-bar  { transform: scaleY(0.15); }
-    .s-thinking .idle-mouth { opacity: 1; }
-
-    @keyframes pupils-think {
-      0%,100% { transform:translate(0,0); }
-      30%     { transform:translate(-7px,-6px); }
-      70%     { transform:translate(7px,-4px); }
-    }
-    @keyframes squint {
-      0%,100% { transform:scaleY(0.38); }
-      50%     { transform:scaleY(0.48); }
-    }
-
-    /* ── Speaking ────────────────────────────────────── */
-    .s-speaking .idle-mouth { opacity: 0; }
-    .s-speaking .mouth-bar  { animation: bar var(--d,0.4s) ease-in-out infinite alternate; }
-    .s-speaking .mouth-bar:nth-child(1){--d:0.36s;animation-delay:0.00s;}
-    .s-speaking .mouth-bar:nth-child(2){--d:0.27s;animation-delay:0.06s;}
-    .s-speaking .mouth-bar:nth-child(3){--d:0.43s;animation-delay:0.02s;}
-    .s-speaking .mouth-bar:nth-child(4){--d:0.31s;animation-delay:0.10s;}
-    .s-speaking .mouth-bar:nth-child(5){--d:0.39s;animation-delay:0.04s;}
-    .s-speaking .mouth-bar:nth-child(6){--d:0.25s;animation-delay:0.08s;}
-    .s-speaking .mouth-bar:nth-child(7){--d:0.34s;animation-delay:0.12s;}
-
-    @keyframes bar {
-      from { transform:scaleY(0.15); }
-      to   { transform:scaleY(1.0); }
-    }
-
-    /* ── UI chrome ───────────────────────────────────── */
+    /* ── UI ─────────────────────────────────────────── */
     #status {
-      margin-top: 16px;
-      font-size: 0.75rem;
-      letter-spacing: 0.22em;
+      margin-top: 14px;
+      font-size: .72rem;
+      letter-spacing: .22em;
       text-transform: uppercase;
-      opacity: 0.45;
+      opacity: .4;
     }
     #talk-btn {
-      margin-top: 20px;
-      padding: 14px 52px;
+      margin-top: 18px;
+      padding: 13px 46px;
       border-radius: 999px;
-      border: 2px solid #4d9fff;
+      border: 2px solid #3b82f6;
       background: transparent;
-      color: #4d9fff;
+      color: #60a5fa;
       font-family: inherit;
-      font-size: 0.9rem;
-      letter-spacing: 0.14em;
+      font-size: .88rem;
+      letter-spacing: .12em;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+      transition: background .15s, color .15s, box-shadow .15s;
     }
-    #talk-btn:not(:disabled):hover { box-shadow: 0 0 20px rgba(77,159,255,0.4); }
-    #talk-btn.recording            { background: #4d9fff; color: #070b14; }
-    #talk-btn:disabled             { opacity: 0.22; cursor: default; }
+    #talk-btn:not(:disabled):hover { box-shadow: 0 0 18px rgba(59,130,246,.45); }
+    #talk-btn.recording            { background: #3b82f6; color: #0c1222; }
+    #talk-btn:disabled             { opacity: .22; cursor: default; }
   </style>
 </head>
 <body>
 
-<svg id="face" viewBox="0 0 300 350" xmlns="http://www.w3.org/2000/svg" class="s-idle">
+<svg id="face" viewBox="0 0 240 310" xmlns="http://www.w3.org/2000/svg" class="s-idle">
   <defs>
-    <radialGradient id="head-grad" cx="42%" cy="35%" r="60%">
-      <stop offset="0%"   stop-color="#1e3f7a"/>
-      <stop offset="100%" stop-color="#0b1a35"/>
+    <linearGradient id="head-g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#4a7fd4"/>
+      <stop offset="100%" stop-color="#1e3f7a"/>
+    </linearGradient>
+    <linearGradient id="panel-g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#6096e8"/>
+      <stop offset="100%" stop-color="#3060b0"/>
+    </linearGradient>
+    <linearGradient id="visor-g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#050d1f"/>
+      <stop offset="100%" stop-color="#091428"/>
+    </linearGradient>
+    <radialGradient id="eye-g" cx="50%" cy="40%" r="60%">
+      <stop offset="0%"   stop-color="#7dd3fc"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
     </radialGradient>
   </defs>
 
   <!-- Antenna -->
-  <line class="antenna-stem" x1="150" y1="72" x2="150" y2="36"/>
-  <circle class="antenna-ball" cx="150" cy="27" r="9"/>
+  <line x1="120" y1="42" x2="120" y2="18" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/>
+  <circle class="antenna-ball" cx="120" cy="12" r="7" fill="#60a5fa"/>
 
-  <!-- Round head -->
-  <circle class="head" cx="150" cy="192" r="122"/>
+  <!-- Neck -->
+  <rect x="88" y="255" width="64" height="32" rx="10" fill="#1e3a6e" stroke="#3b82f6" stroke-width="1.5"/>
+  <rect x="98" y="262" width="44" height="18" rx="6"  fill="#162d55"/>
 
-  <!-- Ear discs -->
-  <circle class="ear" cx="28"  cy="192" r="14"/>
-  <circle class="ear" cx="272" cy="192" r="14"/>
-  <!-- Ear inner bolts -->
-  <circle cx="28"  cy="192" r="5" fill="#4d9fff" opacity="0.6"/>
-  <circle cx="272" cy="192" r="5" fill="#4d9fff" opacity="0.6"/>
+  <!-- Head base -->
+  <rect x="18" y="42" width="204" height="218" rx="38" fill="url(#head-g)" stroke="#5b93e0" stroke-width="2"/>
 
-  <!-- ── Left eye (screen) ── -->
-  <rect class="eye-frame" x="64" y="138" width="74" height="62" rx="12"/>
-  <!-- iris glow layer -->
-  <circle class="iris"  cx="101" cy="169" r="18"/>
-  <!-- pupil -->
-  <circle class="pupil" cx="101" cy="169" r="11"/>
-  <!-- highlight -->
-  <circle class="eye-shine" cx="109" cy="160" r="5"/>
-  <!-- eyelid (covers eye for blink/squint) -->
-  <rect class="eyelid" x="64" y="138" width="74" height="62" rx="12"/>
+  <!-- Top panel strip -->
+  <rect x="48" y="42" width="144" height="28" rx="14" fill="url(#panel-g)"/>
+  <!-- Panel rivets -->
+  <circle cx="72"  cy="56" r="4" fill="#1e3f7a"/>
+  <circle cx="120" cy="56" r="4" fill="#1e3f7a"/>
+  <circle cx="168" cy="56" r="4" fill="#1e3f7a"/>
 
-  <!-- ── Right eye (screen) ── -->
-  <rect class="eye-frame" x="162" y="138" width="74" height="62" rx="12"/>
-  <circle class="iris"  cx="199" cy="169" r="18"/>
-  <circle class="pupil" cx="199" cy="169" r="11"/>
-  <circle class="eye-shine" cx="207" cy="160" r="5"/>
-  <rect class="eyelid" x="162" y="138" width="74" height="62" rx="12"/>
+  <!-- Side ear panels -->
+  <rect x="5"   y="118" width="18" height="56" rx="9" fill="#2a5aaa" stroke="#4a7fd4" stroke-width="1.5"/>
+  <rect x="217" y="118" width="18" height="56" rx="9" fill="#2a5aaa" stroke="#4a7fd4" stroke-width="1.5"/>
+  <!-- Ear accent dots -->
+  <circle cx="14"  cy="146" r="4" fill="#38bdf8" opacity=".7"/>
+  <circle cx="226" cy="146" r="4" fill="#38bdf8" opacity=".7"/>
 
-  <!-- ── Mouth ── -->
-  <rect class="mouth-frame" x="85" y="226" width="130" height="50" rx="12"/>
-  <!-- idle flat line -->
-  <line class="idle-mouth" x1="99" y1="251" x2="201" y2="251"/>
-  <!-- speaking bars (7) -->
-  <g>
-    <rect class="mouth-bar" x="99"  y="230" width="11" height="38" rx="3"/>
-    <rect class="mouth-bar" x="114" y="230" width="11" height="38" rx="3"/>
-    <rect class="mouth-bar" x="129" y="230" width="11" height="38" rx="3"/>
-    <rect class="mouth-bar" x="144" y="230" width="11" height="38" rx="3"/>
-    <rect class="mouth-bar" x="159" y="230" width="11" height="38" rx="3"/>
-    <rect class="mouth-bar" x="174" y="230" width="11" height="38" rx="3"/>
-    <rect class="mouth-bar" x="189" y="230" width="11" height="38" rx="3"/>
+  <!-- Visor (dark screen) -->
+  <rect x="34" y="100" width="172" height="100" rx="20" fill="url(#visor-g)" stroke="#1d4ed8" stroke-width="2"/>
+  <!-- Visor inner glow rim -->
+  <rect x="38" y="104" width="164" height="92" rx="17" fill="none" stroke="#2563eb" stroke-width="1" opacity=".5"/>
+
+  <!-- Left eye -->
+  <circle class="eye-iris"  cx="88"  cy="150" r="26" fill="url(#eye-g)"/>
+  <circle class="eye-pupil" cx="88"  cy="150" r="15" fill="#042040"/>
+  <circle class="eye-shine"           cx="97"  cy="140" r="6"  fill="#e0f2fe" opacity=".7"/>
+  <!-- Left eyelid (blink/squint) -->
+  <rect class="eyelid" x="62" y="124" width="52" height="52" rx="0"
+        fill="#091428" style="transform-box:fill-box;transform-origin:top center;transform:scaleY(0)"/>
+
+  <!-- Right eye -->
+  <circle class="eye-iris"  cx="152" cy="150" r="26" fill="url(#eye-g)"/>
+  <circle class="eye-pupil" cx="152" cy="150" r="15" fill="#042040"/>
+  <circle class="eye-shine"           cx="161" cy="140" r="6"  fill="#e0f2fe" opacity=".7"/>
+  <!-- Right eyelid -->
+  <rect class="eyelid" x="126" y="124" width="52" height="52" rx="0"
+        fill="#091428" style="transform-box:fill-box;transform-origin:top center;transform:scaleY(0)"/>
+
+  <!-- Mouth area -->
+  <rect x="72" y="222" width="96" height="26" rx="13" fill="#091428" stroke="#1d4ed8" stroke-width="1.5"/>
+  <!-- Idle smile -->
+  <path class="idle-mouth" d="M 86 232 Q 120 248 154 232" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+  <!-- Speaking bars (5) -->
+  <g style="clip-path:inset(0 0 0 0 round 13px)">
+    <rect class="mouth-bar" x="82"  y="224" width="10" height="22" rx="3" fill="#38bdf8"
+          style="transform-box:fill-box;transform-origin:bottom center"/>
+    <rect class="mouth-bar" x="96"  y="224" width="10" height="22" rx="3" fill="#38bdf8"
+          style="transform-box:fill-box;transform-origin:bottom center"/>
+    <rect class="mouth-bar" x="110" y="224" width="10" height="22" rx="3" fill="#38bdf8"
+          style="transform-box:fill-box;transform-origin:bottom center"/>
+    <rect class="mouth-bar" x="124" y="224" width="10" height="22" rx="3" fill="#38bdf8"
+          style="transform-box:fill-box;transform-origin:bottom center"/>
+    <rect class="mouth-bar" x="138" y="224" width="10" height="22" rx="3" fill="#38bdf8"
+          style="transform-box:fill-box;transform-origin:bottom center"/>
   </g>
 </svg>
 
@@ -192,33 +182,32 @@
   const statusEl = document.getElementById('status');
   const btn      = document.getElementById('talk-btn');
 
-  function setState(s) { face.setAttribute('class', 's-' + s); statusEl.textContent = s; }
+  function setState(s) {
+    face.setAttribute('class', 's-' + s);
+    statusEl.textContent = s;
+  }
 
-  const ws       = new WebSocket(`ws://${location.host}/ws`);
+  const ws = new WebSocket(`ws://${location.host}/ws`);
   let mediaRecorder = null, audioChunks = [];
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  let audioQueue   = Promise.resolve();
+  let audioQueue = Promise.resolve();
   let pendingAudio = 0;
 
   function queueAudio(b64) {
     pendingAudio++;
     setState('speaking');
-    console.log('[audio] queued, pending=', pendingAudio);
     audioQueue = audioQueue.then(async () => {
       try {
         const bytes  = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-        console.log('[audio] decoding', bytes.length, 'bytes');
         const buffer = await audioCtx.decodeAudioData(bytes.buffer.slice());
         const src    = audioCtx.createBufferSource();
         src.buffer   = buffer;
         src.connect(audioCtx.destination);
         await new Promise(r => { src.onended = r; src.start(0); });
-        console.log('[audio] finished playing');
       } catch(e) {
-        console.error('[audio] error:', e);
+        console.error('[audio]', e);
       } finally {
         pendingAudio--;
-        console.log('[audio] pending now=', pendingAudio);
         if (pendingAudio === 0) setState('idle');
       }
     });
@@ -228,7 +217,6 @@
   ws.onclose = () => { statusEl.textContent = 'disconnected'; btn.disabled = true; };
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
-    console.log('[ws]', msg.type, msg.state ?? '');
     if (msg.type === 'state') {
       if (msg.state !== 'speaking' && msg.state !== 'idle') setState(msg.state);
     } else if (msg.type === 'audio') {
