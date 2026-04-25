@@ -110,10 +110,11 @@ class GeminiClient:
 
     @staticmethod
     def encode_audio(audio_bytes: bytes) -> dict:
-        """Return an inlineData part for WAV audio."""
+        """Return an inlineData part for audio, detecting WAV vs WebM from the header."""
+        mime = "audio/wav" if audio_bytes[:4] == b"RIFF" else "audio/webm"
         return {
             "inlineData": {
-                "mimeType": "audio/wav",
+                "mimeType": mime,
                 "data": base64.b64encode(audio_bytes).decode(),
             }
         }

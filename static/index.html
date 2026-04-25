@@ -192,7 +192,7 @@
   const statusEl = document.getElementById('status');
   const btn      = document.getElementById('talk-btn');
 
-  function setState(s) { face.className = 's-' + s; statusEl.textContent = s; }
+  function setState(s) { face.setAttribute('class', 's-' + s); statusEl.textContent = s; }
 
   const ws       = new WebSocket(`ws://${location.host}/ws`);
   let mediaRecorder = null, audioChunks = [];
