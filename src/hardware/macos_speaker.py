@@ -33,7 +33,7 @@ class MacOSSpeaker:
                 return f.read()
         except subprocess.CalledProcessError as e:
             logger.error(f"TTS synthesis error: {e}")
-            return b""
+            raise
         finally:
             for path in (aiff_path, wav_path):
                 if os.path.exists(path):

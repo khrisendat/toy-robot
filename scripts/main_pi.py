@@ -1,13 +1,13 @@
 import asyncio
 import logging
 import os
-import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src import config
 from src.hardware.speaker import Speaker
+from src.lib.speech import sanitize_for_speech
 from src.hardware.head import Head
 from src.hardware.grayscale import GrayscaleSensor
 from src.hardware.wheels import Wheels
@@ -35,25 +35,6 @@ BATTERY_WARN_COOLDOWN = 30.0      # seconds between repeated critical battery wa
 CLIFF_WARN_COOLDOWN = 10.0        # seconds between repeated cliff warnings
 SAFETY_INTERVAL = 1.0             # seconds between safety checks
 
-
-def sanitize_for_speech(text):
-    """Remove characters that TTS cannot speak meaningfully."""
-    emoji_pattern = re.compile(
-        "["
-        "\U0001F600-\U0001F64F"
-        "\U0001F300-\U0001F5FF"
-        "\U0001F680-\U0001F6FF"
-        "\U0001F1E0-\U0001F1FF"
-        "\U00002702-\U000027B0"
-        "\U000024C2-\U0001F251"
-        "]+",
-        flags=re.UNICODE,
-    )
-    text = emoji_pattern.sub("", text)
-    text = re.sub(r"tool_code\s*\n[\s\S]*", "", text)  # strip gemini code execution blocks
-    text = re.sub(r"[*#_~`|<>^]", "", text)
-    text = re.sub(r" +", " ", text)
-    return text.strip()
 
 
 async def run(func, *args):

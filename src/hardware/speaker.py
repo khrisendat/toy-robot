@@ -4,6 +4,7 @@ import os
 import subprocess
 import tempfile
 import threading
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,9 @@ class Speaker:
             stderr=subprocess.PIPE,
         )
         threading.Thread(target=self._watch_stderr, daemon=True).start()
+        time.sleep(0.5)
+        if self._piper.poll() is not None:
+            raise RuntimeError(f"Piper failed to start (exit {self._piper.returncode})")
         logger.info("Piper TTS process ready.")
 
     def _watch_stderr(self):
@@ -55,13 +59,12 @@ class Speaker:
             self._piper.stdin.write(payload.encode())
             self._piper.stdin.flush()
             if not self._synthesis_done.wait(timeout=15):
-                logger.error("Piper synthesis timed out.")
-                return b""
+                raise RuntimeError("Piper synthesis timed out")
             with open(tmp_path, "rb") as f:
                 return f.read()
-        except Exception as e:
-            logger.error(f"TTS synthesis error: {e}")
-            return b""
+        except Exception:
+            logger.error("TTS synthesis error", exc_info=True)
+            raise
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
