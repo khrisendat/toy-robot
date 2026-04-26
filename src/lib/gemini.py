@@ -2,8 +2,9 @@ import base64
 import json
 import logging
 import socket
-import time
+
 import requests
+
 from .. import config
 
 # Force IPv4 — Pi's IPv6 stack causes ~120s delays before falling back

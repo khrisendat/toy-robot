@@ -1,6 +1,7 @@
 import io
 import logging
 import time
+
 from picamera2 import Picamera2
 
 logger = logging.getLogger(__name__)

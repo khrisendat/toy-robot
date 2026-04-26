@@ -8,7 +8,7 @@ CLIFF_THRESHOLD = 200  # ADC value (0-4095) below which a sensor sees no surface
 class GrayscaleSensor:
     def __init__(self):
         try:
-            from robot_hat import Grayscale_Module, ADC
+            from robot_hat import ADC, Grayscale_Module
             self._sensor = Grayscale_Module(ADC('A0'), ADC('A1'), ADC('A2'))
             self._available = True
             logger.info("Grayscale sensor initialised.")

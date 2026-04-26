@@ -142,5 +142,6 @@ def make_camera_tool(get_image):
 
 # Wire static tools into presets.
 from .conversation import CHILD_ROBOT_CONFIG, PERSONAL_ASSISTANT_CONFIG  # noqa: E402
+
 CHILD_ROBOT_CONFIG.tools = [web_search]
 PERSONAL_ASSISTANT_CONFIG.tools = [get_current_datetime, calculate, web_search]

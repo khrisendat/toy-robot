@@ -1,9 +1,11 @@
-import logging
 import json
+import logging
 import os
+
 import numpy as np
 import pyaudio
-from vosk import Model, KaldiRecognizer
+from vosk import KaldiRecognizer, Model
+
 from src import config
 
 logger = logging.getLogger(__name__)

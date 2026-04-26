@@ -6,17 +6,16 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src import config
-from src.hardware.speaker import Speaker
-from src.lib.speech import sanitize_for_speech
-from src.hardware.head import Head
-from src.hardware.grayscale import GrayscaleSensor
-from src.hardware.wheels import Wheels
-from src.hardware.wake_word import WakeWordDetector
-from src.hardware.listener import Listener
 from src.hardware.camera import Camera
-from src.services.conversation import ConversationManager, CHILD_ROBOT_CONFIG
+from src.hardware.grayscale import GrayscaleSensor
+from src.hardware.head import Head
+from src.hardware.listener import Listener
+from src.hardware.speaker import Speaker
+from src.hardware.wake_word import WakeWordDetector
+from src.hardware.wheels import Wheels
 from src.lib.memory import MemoryStore
-import src.services.tools  # registers static tools into configs
+from src.lib.speech import sanitize_for_speech
+from src.services.conversation import CHILD_ROBOT_CONFIG, ConversationManager
 from src.services.tools import make_camera_tool
 
 _log_format = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"

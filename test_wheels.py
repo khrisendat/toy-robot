@@ -8,6 +8,7 @@ The robot will wiggle around for 15 seconds then stop.
 Press Ctrl+C to stop early.
 """
 import time
+
 from src.hardware.wheels import Wheels
 
 wheels = Wheels()

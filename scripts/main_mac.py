@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import uvicorn
+
 from src.hardware.macos_camera import MacOSCamera
 from src.hardware.macos_speaker import MacOSSpeaker
 from src.server import create_app

@@ -8,7 +8,8 @@ Hold the robot over a normal surface, then slowly move it to an edge
 to see how the readings change. Press Ctrl+C to stop.
 """
 import time
-from src.hardware.grayscale import GrayscaleSensor, CLIFF_THRESHOLD
+
+from src.hardware.grayscale import CLIFF_THRESHOLD, GrayscaleSensor
 
 sensor = GrayscaleSensor()
 

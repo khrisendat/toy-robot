@@ -3,13 +3,15 @@ import base64
 import logging
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-from .services.conversation import ConversationManager, CHILD_ROBOT_CONFIG
 from .lib.memory import MemoryStore
 from .lib.speech import sanitize_for_speech
-from .services import tools as _tools  # noqa: F401 — registers static tools into configs
+from .services import (
+    tools as _tools,  # noqa: F401 — registers static tools into configs
+)
+from .services.conversation import CHILD_ROBOT_CONFIG, ConversationManager
 from .services.tools import make_camera_tool
 
 logger = logging.getLogger(__name__)
