@@ -52,37 +52,26 @@ def create_app(camera=None, speaker=None) -> FastAPI:
                 msg = await websocket.receive_json()
                 msg_type = msg.get("type")
 
-                if state == "busy":
+                if state == "busy" or msg_type != "audio_chunk":
                     continue
 
-                # ── Blob path: current browser sends a complete MediaRecorder blob ──
-                if msg_type == "audio":
-                    state = "busy"
-                    audio_bytes = base64.b64decode(msg["data"])
-                    await _handle_audio(websocket, llm, memory, speaker, audio_bytes)
-                    wake.reset()
-                    recorder = CommandRecorder()
-                    state = "wake"
+                pcm = base64.b64decode(msg["data"])
 
-                # ── Streaming path: new browser sends continuous PCM chunks ─────────
-                elif msg_type == "audio_chunk":
-                    pcm = base64.b64decode(msg["data"])
+                if state == "wake":
+                    if wake.process_chunk(pcm):
+                        wake.reset()
+                        recorder = CommandRecorder()
+                        state = "command"
+                        await websocket.send_json({"type": "state", "state": "listening"})
 
-                    if state == "wake":
-                        if wake.process_chunk(pcm):
-                            wake.reset()
-                            recorder = CommandRecorder()
-                            state = "command"
-                            await websocket.send_json({"type": "state", "state": "listening"})
-
-                    elif state == "command":
-                        wav = recorder.feed(pcm)
-                        if wav is not None:
-                            state = "busy"
-                            await _handle_audio(websocket, llm, memory, speaker, wav)
-                            wake.reset()
-                            recorder = CommandRecorder()
-                            state = "wake"
+                elif state == "command":
+                    wav = recorder.feed(pcm)
+                    if wav is not None:
+                        state = "busy"
+                        await _handle_audio(websocket, llm, memory, speaker, wav)
+                        wake.reset()
+                        recorder = CommandRecorder()
+                        state = "wake"
 
         except WebSocketDisconnect:
             logger.info("Browser disconnected")

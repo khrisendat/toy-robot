@@ -93,7 +93,7 @@
       text-transform: uppercase;
       opacity: .4;
     }
-    .btn {
+    #setup-btn {
       margin-top: 18px;
       padding: 13px 46px;
       border-radius: 999px;
@@ -105,12 +105,10 @@
       letter-spacing: .12em;
       cursor: pointer;
       transition: background .15s, color .15s, box-shadow .15s;
-      touch-action: none;
     }
-    .btn:active               { background: #1d4ed8; color: #fff; box-shadow: 0 0 24px rgba(59,130,246,.6); }
-    .btn:hover:not(:disabled) { box-shadow: 0 0 18px rgba(59,130,246,.45); }
-    .btn:disabled             { opacity: .25; cursor: default; }
-    .btn.hidden               { display: none; }
+    #setup-btn:hover:not(:disabled) { box-shadow: 0 0 18px rgba(59,130,246,.45); }
+    #setup-btn:disabled             { opacity: .25; cursor: default; }
+    #setup-btn.hidden               { display: none; }
   </style>
 </head>
 <body>
@@ -145,43 +143,43 @@
     <rect x="88" y="255" width="64" height="32" rx="10" fill="#1e3a6e" stroke="#3b82f6" stroke-width="1.5"/>
     <rect x="98" y="262" width="44" height="18" rx="6"  fill="#162d55"/>
 
-    <!-- Head base -->
-    <rect x="18" y="42" width="204" height="218" rx="38" fill="url(#head-g)" stroke="#5b93e0" stroke-width="2"/>
+    <!-- Head base — slightly wider than before -->
+    <rect x="12" y="42" width="216" height="218" rx="38" fill="url(#head-g)" stroke="#5b93e0" stroke-width="2"/>
 
     <!-- Top panel strip -->
-    <rect x="48" y="42" width="144" height="28" rx="14" fill="url(#panel-g)"/>
+    <rect x="42" y="42" width="156" height="28" rx="14" fill="url(#panel-g)"/>
     <circle cx="72"  cy="56" r="4" fill="#1e3f7a"/>
     <circle cx="120" cy="56" r="4" fill="#1e3f7a"/>
     <circle cx="168" cy="56" r="4" fill="#1e3f7a"/>
 
     <!-- Side ear panels -->
-    <rect x="5"   y="118" width="18" height="56" rx="9" fill="#2a5aaa" stroke="#4a7fd4" stroke-width="1.5"/>
-    <rect x="217" y="118" width="18" height="56" rx="9" fill="#2a5aaa" stroke="#4a7fd4" stroke-width="1.5"/>
-    <circle cx="14"  cy="146" r="4" fill="#38bdf8" opacity=".7"/>
-    <circle cx="226" cy="146" r="4" fill="#38bdf8" opacity=".7"/>
+    <rect x="0"   y="118" width="18" height="56" rx="9" fill="#2a5aaa" stroke="#4a7fd4" stroke-width="1.5"/>
+    <rect x="222" y="118" width="18" height="56" rx="9" fill="#2a5aaa" stroke="#4a7fd4" stroke-width="1.5"/>
+    <circle cx="9"   cy="146" r="4" fill="#38bdf8" opacity=".7"/>
+    <circle cx="231" cy="146" r="4" fill="#38bdf8" opacity=".7"/>
 
     <!-- Cheek blushes -->
-    <ellipse class="cheek" cx="58"  cy="206" rx="22" ry="13" fill="#f472b6"/>
-    <ellipse class="cheek" cx="182" cy="206" rx="22" ry="13" fill="#f472b6"/>
+    <ellipse class="cheek" cx="54"  cy="206" rx="22" ry="13" fill="#f472b6"/>
+    <ellipse class="cheek" cx="186" cy="206" rx="22" ry="13" fill="#f472b6"/>
 
     <!-- Visor -->
-    <rect x="34" y="100" width="172" height="100" rx="20" fill="url(#visor-g)" stroke="#1d4ed8" stroke-width="2"/>
-    <rect x="38" y="104" width="164" height="92" rx="17" fill="none" stroke="#2563eb" stroke-width="1" opacity=".5"/>
+    <rect x="28" y="100" width="184" height="100" rx="20" fill="url(#visor-g)" stroke="#1d4ed8" stroke-width="2"/>
+    <rect x="32" y="104" width="176" height="92" rx="17" fill="none" stroke="#2563eb" stroke-width="1" opacity=".5"/>
 
-    <!-- Left eye -->
-    <circle class="eye-iris"  cx="88"  cy="150" r="26" fill="url(#eye-g)"/>
-    <circle class="eye-pupil" cx="88"  cy="150" r="15" fill="#042040"
+    <!-- Left eye — smaller iris -->
+    <circle class="eye-iris"  cx="88"  cy="150" r="19" fill="url(#eye-g)"/>
+    <circle class="eye-pupil" cx="88"  cy="150" r="11" fill="#042040"
             style="transform-box:fill-box;transform-origin:center"/>
-    <circle class="eye-shine"           cx="97"  cy="140" r="6"  fill="#e0f2fe" opacity=".7"/>
-    <rect class="eyelid" x="62" y="124" width="52" height="52"
+    <circle class="eye-shine"          cx="95"  cy="142" r="5"  fill="#e0f2fe" opacity=".7"/>
+    <rect class="eyelid" x="69" y="131" width="38" height="38"
           fill="#091428" style="transform-box:fill-box;transform-origin:top center;transform:scaleY(0)"/>
 
-    <!-- Right eye -->
-    <circle class="eye-iris"  cx="152" cy="150" r="26" fill="url(#eye-g)"/>
-    <circle class="eye-pupil" cx="152" cy="150" r="15" fill="#042040"
+    <!-- Right eye — smaller iris -->
+    <circle class="eye-iris"  cx="152" cy="150" r="19" fill="url(#eye-g)"/>
+    <circle class="eye-pupil" cx="152" cy="150" r="11" fill="#042040"
             style="transform-box:fill-box;transform-origin:center"/>
-    <circle class="eye-shine"           cx="161" cy="140" r="6"  fill="#e0f2fe" opacity=".7"/>
-    <rect class="eyelid" x="126" y="124" width="52" height="52"
+    <circle class="eye-shine"          cx="159" cy="142" r="5"  fill="#e0f2fe" opacity=".7"/>
+    <rect class="eyelid" x="133" y="131" width="38" height="38"
           fill="#091428" style="transform-box:fill-box;transform-origin:top center;transform:scaleY(0)"/>
 
     <!-- Mouth area -->
@@ -195,14 +193,12 @@
 </svg>
 
 <div id="status">Connecting…</div>
-<button id="setup-btn" class="btn hidden">Tap to Start</button>
-<button id="talk-btn"  class="btn hidden">Hold to Talk</button>
+<button id="setup-btn" class="hidden">Tap to Start</button>
 
 <script>
   const face     = document.getElementById('face');
   const statusEl = document.getElementById('status');
   const setupBtn = document.getElementById('setup-btn');
-  const talkBtn  = document.getElementById('talk-btn');
 
   // ── Playback ───────────────────────────────────────────────────────────────
   let audioCtx     = null;
@@ -211,23 +207,17 @@
 
   // ── PCM streaming ──────────────────────────────────────────────────────────
   let workletNode      = null;
-  let micStream        = null;
   let streamingEnabled = false;
 
   // ── State ──────────────────────────────────────────────────────────────────
-  let busy = false;
-
   function setState(s) {
     face.setAttribute('class', 's-' + s);
-    busy = (s === 'thinking' || s === 'speaking');
-    talkBtn.disabled = busy;
     statusEl.textContent = s === 'idle' ? "say 'hey robot'" : s;
     // idle → resume streaming; thinking/speaking → pause streaming.
-    // 'listening' is intentionally not handled here: the wake-word path needs
-    // streaming to stay on, while the Hold-to-Talk path disables it before
-    // calling setState('listening') and relies on idle to re-enable it.
-    if (s === 'idle')  streamingEnabled = true;
-    if (busy)          streamingEnabled = false;
+    // 'listening' is intentionally not set here — streaming must stay on
+    // so the server's CommandRecorder continues receiving the command audio.
+    if (s === 'idle')                              streamingEnabled = true;
+    if (s === 'thinking' || s === 'speaking')      streamingEnabled = false;
   }
 
   // ── One-time setup (requires user gesture) ─────────────────────────────────
@@ -237,6 +227,7 @@
     // AudioContext must be created synchronously inside the gesture handler.
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+    let micStream;
     try {
       micStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
@@ -261,54 +252,13 @@
       }));
     };
 
-    // Connect mic → worklet. Not connected to destination — avoids echo.
     audioCtx.createMediaStreamSource(micStream).connect(workletNode);
 
     setupBtn.classList.add('hidden');
-    talkBtn.classList.remove('hidden');
     setState('idle');
   }
 
   setupBtn.addEventListener('click', setup);
-
-  // ── Hold-to-Talk fallback ──────────────────────────────────────────────────
-  // Uses the same micStream as the worklet. Pauses PCM streaming while
-  // recording so the server doesn't receive both paths simultaneously.
-  let mediaRecorder  = null;
-  let recordedChunks = [];
-
-  function startManualRecording() {
-    if (busy || ws.readyState !== WebSocket.OPEN || !micStream) return;
-    streamingEnabled = false;   // pause worklet stream; setState('listening') won't re-enable
-    setState('listening');
-    recordedChunks = [];
-    mediaRecorder  = new MediaRecorder(micStream);
-    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-    mediaRecorder.onstop = sendAudio;
-    mediaRecorder.start();
-  }
-
-  function stopManualRecording() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop();
-      setState('thinking');
-    }
-  }
-
-  function sendAudio() {
-    const blob   = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      ws.send(JSON.stringify({ type: 'audio', data: reader.result.split(',')[1] }));
-    };
-    reader.readAsDataURL(blob);
-  }
-
-  talkBtn.addEventListener('mousedown',  startManualRecording);
-  talkBtn.addEventListener('mouseup',    stopManualRecording);
-  talkBtn.addEventListener('mouseleave', stopManualRecording);
-  talkBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startManualRecording(); });
-  talkBtn.addEventListener('touchend',   (e) => { e.preventDefault(); stopManualRecording(); });
 
   // ── Playback ───────────────────────────────────────────────────────────────
   function queueAudio(b64) {
