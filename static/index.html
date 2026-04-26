@@ -105,10 +105,11 @@
       letter-spacing: .12em;
       cursor: pointer;
       transition: background .15s, color .15s, box-shadow .15s;
+      touch-action: none;
     }
-    #talk-btn:not(:disabled):hover { box-shadow: 0 0 18px rgba(59,130,246,.45); }
-    #talk-btn.recording            { background: #3b82f6; color: #0c1222; }
-    #talk-btn:disabled             { opacity: .22; cursor: default; }
+    #talk-btn:active          { background: #1d4ed8; color: #fff; box-shadow: 0 0 24px rgba(59,130,246,.6); }
+    #talk-btn:hover:not(:disabled) { box-shadow: 0 0 18px rgba(59,130,246,.45); }
+    #talk-btn:disabled        { opacity: .25; cursor: default; }
   </style>
 </head>
 <body>
@@ -198,19 +199,86 @@
 <script>
   const face     = document.getElementById('face');
   const statusEl = document.getElementById('status');
-  const btn      = document.getElementById('talk-btn');
+  const talkBtn  = document.getElementById('talk-btn');
 
-  function setState(s) {
-    face.setAttribute('class', 's-' + s);
-    statusEl.textContent = s;
-  }
-
-  const ws = new WebSocket(`ws://${location.host}/ws`);
-  let mediaRecorder = null, audioChunks = [];
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // ── Audio playback ─────────────────────────────────────────────────────────
+  // Created lazily on first button press (gesture required by autoplay policy).
+  let audioCtx   = null;
   let audioQueue = Promise.resolve();
   let pendingAudio = 0;
 
+  // ── State ──────────────────────────────────────────────────────────────────
+  let busy = false;
+
+  function setState(s) {
+    face.setAttribute('class', 's-' + s);
+    statusEl.textContent = s === 'idle' ? 'hold to talk' : s;
+    busy = (s === 'thinking' || s === 'speaking');
+    talkBtn.disabled = busy;
+  }
+
+  // ── Recording ──────────────────────────────────────────────────────────────
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let micStream = null;
+
+  async function startRecording() {
+    if (busy || ws.readyState !== WebSocket.OPEN) return;
+
+    // AudioContext must be created synchronously inside the gesture handler
+    // before any await, otherwise Chrome's autoplay policy may block it.
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (err) {
+      statusEl.textContent = err.name === 'NotFoundError' ? 'no mic found' : 'mic error';
+      return;
+    }
+
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(micStream);
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      // Release mic immediately so the browser indicator disappears.
+      micStream.getTracks().forEach(t => t.stop());
+      sendAudio();
+    };
+
+    mediaRecorder.start();
+    setState('listening');
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      setState('thinking');
+    }
+  }
+
+  function sendAudio() {
+    // Use FileReader for base64 encoding — btoa(String.fromCharCode(...)) spreads
+    // the full buffer as function args and overflows the call stack on long recordings.
+    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const b64 = reader.result.split(',')[1];
+      ws.send(JSON.stringify({ type: 'audio', data: b64 }));
+    };
+    reader.readAsDataURL(blob);
+  }
+
+  // ── Playback ───────────────────────────────────────────────────────────────
   function queueAudio(b64) {
     pendingAudio++;
     setState('speaking');
@@ -222,7 +290,7 @@
         src.buffer   = buffer;
         src.connect(audioCtx.destination);
         await new Promise(r => { src.onended = r; src.start(0); });
-      } catch(e) {
+      } catch (e) {
         console.error('[audio]', e);
       } finally {
         pendingAudio--;
@@ -231,47 +299,32 @@
     });
   }
 
-  ws.onopen  = () => { setState('idle'); btn.disabled = false; };
-  ws.onclose = () => { statusEl.textContent = 'disconnected'; btn.disabled = true; };
+  // ── Button ─────────────────────────────────────────────────────────────────
+  talkBtn.addEventListener('mousedown',  startRecording);
+  talkBtn.addEventListener('mouseup',    stopRecording);
+  talkBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
+  talkBtn.addEventListener('touchend',   (e) => { e.preventDefault(); stopRecording(); });
+
+  // If the pointer leaves the button while held, stop recording.
+  talkBtn.addEventListener('mouseleave', stopRecording);
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+
+  ws.onopen  = () => { setState('idle'); talkBtn.disabled = false; };
+  ws.onclose = () => { statusEl.textContent = 'disconnected'; talkBtn.disabled = true; };
+
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
     if (msg.type === 'state') {
-      if (msg.state !== 'speaking' && msg.state !== 'idle') setState(msg.state);
+      if (msg.state === 'idle' && pendingAudio === 0) setState('idle');
+      else if (msg.state !== 'idle' && msg.state !== 'speaking') setState(msg.state);
     } else if (msg.type === 'audio') {
       queueAudio(msg.data);
     } else if (msg.type === 'speak') {
       speechSynthesis.speak(new SpeechSynthesisUtterance(msg.text));
     }
   };
-
-  btn.addEventListener('mousedown',  startRecording);
-  btn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
-  btn.addEventListener('mouseup',    stopRecording);
-  btn.addEventListener('touchend',   stopRecording);
-
-  async function startRecording() {
-    if (audioCtx.state === 'suspended') await audioCtx.resume();
-    btn.classList.add('recording');
-    const stream  = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioChunks   = [];
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = sendAudio;
-    mediaRecorder.start();
-    setState('listening');
-  }
-
-  function stopRecording() {
-    btn.classList.remove('recording');
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  }
-
-  async function sendAudio() {
-    const blob   = new Blob(audioChunks, { type: 'audio/webm' });
-    const buffer = await blob.arrayBuffer();
-    const b64    = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-    ws.send(JSON.stringify({ type: 'audio', data: b64 }));
-  }
 </script>
 </body>
 </html>

@@ -10,6 +10,10 @@
 
 - **`MediaRecorder` MIME type hardcoded as `audio/webm`** — `sendAudio` constructs the `Blob` with `type: 'audio/webm'` regardless of what the browser actually recorded. Safari uses `audio/mp4`. Fix: use `mediaRecorder.mimeType` when constructing the `Blob`.
 
+## Features
+
+- **Chrome Kiosk Mode for dedicated device** — Launch the web app UI in Chrome kiosk mode (`--kiosk` flag) so the browser is locked to the app full-screen with no address bar, tabs, or menus. Add a launch script that runs `google-chrome --kiosk --noerrdialogs --disable-infobars --no-first-run http://localhost:<port>`. Consider wiring it into a systemd unit or `.xinitrc` for auto-start on boot (Raspberry Pi).
+
 ## Refactoring
 
 - **Deduplicate entry points** — `conversation_loop`, `say`, `run`, and `sanitize_for_speech` are copy-pasted between `main_mac.py` and `main_pi.py`. Extract shared logic into a module; entry points should only wire up hardware.

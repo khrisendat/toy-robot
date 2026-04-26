@@ -38,13 +38,18 @@ def create_app(camera=None, speaker=None) -> FastAPI:
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
         logger.info("Browser connected")
+        busy = False
         await websocket.send_json({"type": "state", "state": "idle"})
 
         try:
             while True:
                 msg = await websocket.receive_json()
-                if msg.get("type") == "audio":
-                    await _handle_audio(websocket, llm, memory, speaker, msg["data"])
+                if msg.get("type") != "audio" or busy:
+                    continue
+                busy = True
+                audio_bytes = base64.b64decode(msg["data"])
+                await _handle_audio(websocket, llm, memory, speaker, audio_bytes)
+                busy = False
         except WebSocketDisconnect:
             logger.info("Browser disconnected")
 
@@ -56,9 +61,8 @@ async def _handle_audio(
     llm: ConversationManager,
     memory: MemoryStore,
     speaker,
-    audio_b64: str,
+    audio_bytes: bytes,
 ):
-    audio_bytes = base64.b64decode(audio_b64)
     loop = asyncio.get_running_loop()
     sentence_queue: asyncio.Queue = asyncio.Queue()
 
@@ -77,7 +81,6 @@ async def _handle_audio(
     await websocket.send_json({"type": "state", "state": "thinking"})
     loop.run_in_executor(None, stream_sentences)
 
-    loop = asyncio.get_running_loop()
     speaking = False
     while True:
         sentence = await sentence_queue.get()
@@ -90,8 +93,8 @@ async def _handle_audio(
             await websocket.send_json({"type": "state", "state": "speaking"})
             speaking = True
         if speaker is not None:
-            audio_bytes = await loop.run_in_executor(None, speaker.synthesize, text)
-            b64 = base64.b64encode(audio_bytes).decode()
+            wav = await loop.run_in_executor(None, speaker.synthesize, text)
+            b64 = base64.b64encode(wav).decode()
             await websocket.send_json({"type": "audio", "data": b64, "mime": "audio/wav"})
         else:
             await websocket.send_json({"type": "speak", "text": text})

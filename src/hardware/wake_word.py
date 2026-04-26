@@ -84,3 +84,48 @@ class WakeWordDetector:
             self.audio_stream.close()
         if hasattr(self, 'pa') and self.pa is not None:
             self.pa.terminate()
+
+
+class WakeWordStreamHandler:
+    """Wake-word detection from streamed PCM bytes — no PyAudio, for WebSocket use."""
+
+    _WAKE_WORDS = {"hey", "robot"}
+
+    def __init__(self):
+        model_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "..", "models", "vosk"
+        )
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(
+                f"Vosk model not found at {model_path}. "
+                "Run: ./scripts/download_model.sh"
+            )
+        self._model = Model(model_path)
+        self._rec = self._make_recognizer()
+
+    def _matches(self, text: str) -> bool:
+        words = set(text.split())
+        return self._WAKE_WORDS.issubset(words)
+
+    def process_chunk(self, pcm: bytes) -> bool:
+        """Feed raw PCM (int16, mono, 16 kHz). Returns True when wake word detected."""
+        if self._rec.AcceptWaveform(pcm):
+            text = json.loads(self._rec.Result()).get("text", "")
+            logger.debug(f"Vosk final: '{text}'")
+            if self._matches(text):
+                logger.info("Wake word detected (final)")
+                return True
+        else:
+            partial = json.loads(self._rec.PartialResult()).get("partial", "")
+            logger.debug(f"Vosk partial: '{partial}'")
+            if self._matches(partial):
+                logger.info("Wake word detected (partial)")
+                return True
+        return False
+
+    def reset(self):
+        """Reset recognizer state for the next wake-word cycle."""
+        self._rec = self._make_recognizer()
+
+    def _make_recognizer(self):
+        return KaldiRecognizer(self._model, 16000, '["hey", "robot", "[unk]"]')
