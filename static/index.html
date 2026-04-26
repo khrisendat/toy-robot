@@ -93,7 +93,7 @@
       text-transform: uppercase;
       opacity: .4;
     }
-    #talk-btn {
+    .btn {
       margin-top: 18px;
       padding: 13px 46px;
       border-radius: 999px;
@@ -107,9 +107,10 @@
       transition: background .15s, color .15s, box-shadow .15s;
       touch-action: none;
     }
-    #talk-btn:active          { background: #1d4ed8; color: #fff; box-shadow: 0 0 24px rgba(59,130,246,.6); }
-    #talk-btn:hover:not(:disabled) { box-shadow: 0 0 18px rgba(59,130,246,.45); }
-    #talk-btn:disabled        { opacity: .25; cursor: default; }
+    .btn:active               { background: #1d4ed8; color: #fff; box-shadow: 0 0 24px rgba(59,130,246,.6); }
+    .btn:hover:not(:disabled) { box-shadow: 0 0 18px rgba(59,130,246,.45); }
+    .btn:disabled             { opacity: .25; cursor: default; }
+    .btn.hidden               { display: none; }
   </style>
 </head>
 <body>
@@ -194,42 +195,47 @@
 </svg>
 
 <div id="status">Connecting…</div>
-<button id="talk-btn" disabled>Hold to Talk</button>
+<button id="setup-btn" class="btn hidden">Tap to Start</button>
+<button id="talk-btn"  class="btn hidden">Hold to Talk</button>
 
 <script>
   const face     = document.getElementById('face');
   const statusEl = document.getElementById('status');
+  const setupBtn = document.getElementById('setup-btn');
   const talkBtn  = document.getElementById('talk-btn');
 
-  // ── Audio playback ─────────────────────────────────────────────────────────
-  // Created lazily on first button press (gesture required by autoplay policy).
-  let audioCtx   = null;
-  let audioQueue = Promise.resolve();
+  // ── Playback ───────────────────────────────────────────────────────────────
+  let audioCtx     = null;
+  let audioQueue   = Promise.resolve();
   let pendingAudio = 0;
+
+  // ── PCM streaming ──────────────────────────────────────────────────────────
+  let workletNode      = null;
+  let micStream        = null;
+  let streamingEnabled = false;
 
   // ── State ──────────────────────────────────────────────────────────────────
   let busy = false;
 
   function setState(s) {
     face.setAttribute('class', 's-' + s);
-    statusEl.textContent = s === 'idle' ? 'hold to talk' : s;
     busy = (s === 'thinking' || s === 'speaking');
     talkBtn.disabled = busy;
+    statusEl.textContent = s === 'idle' ? "say 'hey robot'" : s;
+    // idle → resume streaming; thinking/speaking → pause streaming.
+    // 'listening' is intentionally not handled here: the wake-word path needs
+    // streaming to stay on, while the Hold-to-Talk path disables it before
+    // calling setState('listening') and relies on idle to re-enable it.
+    if (s === 'idle')  streamingEnabled = true;
+    if (busy)          streamingEnabled = false;
   }
 
-  // ── Recording ──────────────────────────────────────────────────────────────
-  let mediaRecorder = null;
-  let recordedChunks = [];
-  let micStream = null;
+  // ── One-time setup (requires user gesture) ─────────────────────────────────
+  async function setup() {
+    setupBtn.disabled = true;
 
-  async function startRecording() {
-    if (busy || ws.readyState !== WebSocket.OPEN) return;
-
-    // AudioContext must be created synchronously inside the gesture handler
-    // before any await, otherwise Chrome's autoplay policy may block it.
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    // AudioContext must be created synchronously inside the gesture handler.
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
     try {
       micStream = await navigator.mediaDevices.getUserMedia({
@@ -237,29 +243,52 @@
       });
     } catch (err) {
       statusEl.textContent = err.name === 'NotFoundError' ? 'no mic found' : 'mic error';
+      setupBtn.disabled = false;
       return;
     }
 
     if (audioCtx.state === 'suspended') await audioCtx.resume();
 
-    recordedChunks = [];
-    mediaRecorder = new MediaRecorder(micStream);
+    await audioCtx.audioWorklet.addModule('/static/worklet.js');
+    workletNode = new AudioWorkletNode(audioCtx, 'pcm-downsampler');
 
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) recordedChunks.push(e.data);
+    workletNode.port.onmessage = ({ data }) => {
+      if (!streamingEnabled || ws.readyState !== WebSocket.OPEN) return;
+      const bytes = new Uint8Array(data);
+      ws.send(JSON.stringify({
+        type: 'audio_chunk',
+        data: btoa(String.fromCharCode(...bytes)),
+      }));
     };
 
-    mediaRecorder.onstop = () => {
-      // Release mic immediately so the browser indicator disappears.
-      micStream.getTracks().forEach(t => t.stop());
-      sendAudio();
-    };
+    // Connect mic → worklet. Not connected to destination — avoids echo.
+    audioCtx.createMediaStreamSource(micStream).connect(workletNode);
 
-    mediaRecorder.start();
-    setState('listening');
+    setupBtn.classList.add('hidden');
+    talkBtn.classList.remove('hidden');
+    setState('idle');
   }
 
-  function stopRecording() {
+  setupBtn.addEventListener('click', setup);
+
+  // ── Hold-to-Talk fallback ──────────────────────────────────────────────────
+  // Uses the same micStream as the worklet. Pauses PCM streaming while
+  // recording so the server doesn't receive both paths simultaneously.
+  let mediaRecorder  = null;
+  let recordedChunks = [];
+
+  function startManualRecording() {
+    if (busy || ws.readyState !== WebSocket.OPEN || !micStream) return;
+    streamingEnabled = false;   // pause worklet stream; setState('listening') won't re-enable
+    setState('listening');
+    recordedChunks = [];
+    mediaRecorder  = new MediaRecorder(micStream);
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = sendAudio;
+    mediaRecorder.start();
+  }
+
+  function stopManualRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
       setState('thinking');
@@ -267,16 +296,19 @@
   }
 
   function sendAudio() {
-    // Use FileReader for base64 encoding — btoa(String.fromCharCode(...)) spreads
-    // the full buffer as function args and overflows the call stack on long recordings.
-    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+    const blob   = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
     const reader = new FileReader();
     reader.onloadend = () => {
-      const b64 = reader.result.split(',')[1];
-      ws.send(JSON.stringify({ type: 'audio', data: b64 }));
+      ws.send(JSON.stringify({ type: 'audio', data: reader.result.split(',')[1] }));
     };
     reader.readAsDataURL(blob);
   }
+
+  talkBtn.addEventListener('mousedown',  startManualRecording);
+  talkBtn.addEventListener('mouseup',    stopManualRecording);
+  talkBtn.addEventListener('mouseleave', stopManualRecording);
+  talkBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startManualRecording(); });
+  talkBtn.addEventListener('touchend',   (e) => { e.preventDefault(); stopManualRecording(); });
 
   // ── Playback ───────────────────────────────────────────────────────────────
   function queueAudio(b64) {
@@ -299,20 +331,11 @@
     });
   }
 
-  // ── Button ─────────────────────────────────────────────────────────────────
-  talkBtn.addEventListener('mousedown',  startRecording);
-  talkBtn.addEventListener('mouseup',    stopRecording);
-  talkBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
-  talkBtn.addEventListener('touchend',   (e) => { e.preventDefault(); stopRecording(); });
-
-  // If the pointer leaves the button while held, stop recording.
-  talkBtn.addEventListener('mouseleave', stopRecording);
-
   // ── WebSocket ──────────────────────────────────────────────────────────────
   const ws = new WebSocket(`ws://${location.host}/ws`);
 
-  ws.onopen  = () => { setState('idle'); talkBtn.disabled = false; };
-  ws.onclose = () => { statusEl.textContent = 'disconnected'; talkBtn.disabled = true; };
+  ws.onopen  = () => { statusEl.textContent = 'tap to start'; setupBtn.classList.remove('hidden'); };
+  ws.onclose = () => { statusEl.textContent = 'disconnected'; streamingEnabled = false; };
 
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
