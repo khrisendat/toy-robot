@@ -132,6 +132,8 @@ output.mp3
 
 # Conversation memory
 memory.json
+profile.json
+preferences.json
 
 # macOS conversation log
 mac_conversation.log

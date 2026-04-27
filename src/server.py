@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .hardware.wake_word import WakeWordStreamHandler
 from .lib.command_recorder import CommandRecorder
-from .lib.memory import MemoryStore
+from .lib.memory_manager import MemoryManager
 from .lib.speech import sanitize_for_speech
 from .services import (
     tools as _tools,  # noqa: F401 — registers static tools into configs
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def create_app(camera=None, speaker=None) -> FastAPI:
     app = FastAPI()
 
-    memory = MemoryStore()
+    memory = MemoryManager()
 
     if camera is not None:
         if not any(t.name == "capture_image" for t in CHILD_ROBOT_CONFIG.tools):
@@ -126,7 +126,7 @@ def create_app(camera=None, speaker=None) -> FastAPI:
 async def _handle_audio(
     websocket: WebSocket,
     llm: ConversationManager,
-    memory: MemoryStore,
+    memory: MemoryManager,
     speaker,
     audio_bytes: bytes,
 ):

@@ -7,6 +7,7 @@ from typing import Callable
 
 from .. import config
 from ..lib.gemini import GeminiClient
+from ..lib.memory_manager import strip_annotations
 
 
 def _extract_sentences(text):
@@ -42,6 +43,16 @@ class ConversationConfig:
     thinking_budget: int = -1  # -1 = dynamic, 0 = disabled, 1-24576 = fixed cap
 
 
+_ANNOTATION_INSTRUCTION = (
+    "When you learn a personal fact about the child (a name they want to be called, a family member, a pet), "
+    "silently append [MEMORY profile key=\"value\"] at the very end of your response. "
+    "When you learn what the child likes, dislikes, or is afraid of, "
+    "append [MEMORY preference key=\"value\"] at the very end. "
+    "If the child gives you a new name to call yourself, append [MEMORY profile robot_name=\"name\"]. "
+    "Use short lowercase keys like: called, age, pet, sibling, likes, dislikes, scared_of, robot_name. "
+    "Only annotate genuinely new information not already in your context. Never say the tags aloud."
+)
+
 CHILD_ROBOT_CONFIG = ConversationConfig(
     system_prompt=(
         f"You are a friendly robot assistant for a four-year-old named {config.USER_NAME}. "
@@ -51,7 +62,8 @@ CHILD_ROBOT_CONFIG = ConversationConfig(
         "Vary your tone and energy to keep things fun and surprising. "
         "About half the time, end your response with a simple, playful follow-up question to keep the conversation going. "
         "You have a capture_image tool — you MUST call it whenever asked to look at something, describe what you see, or identify an object. Never pretend to look or guess; always call the tool first. "
-        "You have a web_search tool available. You MUST call it for any question about current events, news, weather, movies, sports scores, or anything that changes over time — do not guess or say you don't know, search first."
+        "You have a web_search tool available. You MUST call it for any question about current events, news, weather, movies, sports scores, or anything that changes over time — do not guess or say you don't know, search first. "
+        f"\n\n{_ANNOTATION_INSTRUCTION}"
     ),
     audio_instruction=(
         "Respond to what the child said. "
@@ -99,6 +111,9 @@ class ConversationManager:
         try:
             text, tool_turns = self._call(user_parts, system_prompt)
 
+            if hasattr(self.memory, "process_annotations"):
+                text = self.memory.process_annotations(text)
+
             self._history.append({"role": "user", "parts": [{"text": history_text}]})
             self._history.extend(tool_turns)
             self._history.append({"role": "model", "parts": [{"text": text}]})
@@ -144,11 +159,15 @@ class ConversationManager:
                     buffer += chunk
                     sentences, buffer = _extract_sentences(buffer)
                     for sentence in sentences:
-                        yield sentence
+                        clean = strip_annotations(sentence)
+                        if clean:
+                            yield clean
 
                 if function_call is None:
                     if buffer.strip():
-                        yield buffer.strip()
+                        clean = strip_annotations(buffer.strip())
+                        if clean:
+                            yield clean
                     break
 
                 model_turn, user_turn = self._execute_tool_call(function_call, tool_map)
@@ -166,12 +185,17 @@ class ConversationManager:
             yield "I'm sorry, I'm having a little trouble thinking right now."
             return
 
-        logger.info(f"LLM complete ({time.time() - start:.2f}s): {full_text}")
+        if hasattr(self.memory, "process_annotations"):
+            clean_full_text = self.memory.process_annotations(full_text)
+        else:
+            clean_full_text = full_text
+
+        logger.info(f"LLM complete ({time.time() - start:.2f}s): {clean_full_text}")
         self._history.append({"role": "user", "parts": [{"text": history_text}]})
         self._history.extend(tool_turns)
-        self._history.append({"role": "model", "parts": [{"text": full_text}]})
+        self._history.append({"role": "model", "parts": [{"text": clean_full_text}]})
         if store_memory is not None:
-            store_memory(history_text, full_text, self._cfg.user_label, self._cfg.assistant_label)
+            store_memory(history_text, clean_full_text, self._cfg.user_label, self._cfg.assistant_label)
 
     # ------------------------------------------------------------------
     # Internal
@@ -254,15 +278,28 @@ class ConversationManager:
         return "I had trouble completing that request.", tool_turns
 
     def _build_system_prompt(self, query: str) -> str:
+        base = self._cfg.system_prompt
         if self.memory is None:
-            return self._cfg.system_prompt
-        memories = self.memory.search(query, top_k=3)
-        if not memories:
-            return self._cfg.system_prompt
-        memory_block = "\n".join(f"- {m}" for m in memories)
-        logger.debug(f"[Memory] Injecting {len(memories)} memories into prompt")
-        return (
-            self._cfg.system_prompt
-            + "\n\nRelevant memories from past conversations:\n"
-            + memory_block
-        )
+            return base
+
+        robot_name = None
+        if hasattr(self.memory, "profile"):
+            robot_name = self.memory.profile.get("robot_name")
+        if robot_name:
+            base = f"Your name is {robot_name}. " + base
+
+        if hasattr(self.memory, "build_context"):
+            context = self.memory.build_context(query)
+        else:
+            memories = self.memory.search(query, top_k=3)
+            context = (
+                "Relevant memories from past conversations:\n"
+                + "\n".join(f"- {m}" for m in memories)
+                if memories
+                else ""
+            )
+
+        if not context:
+            return base
+        logger.debug("[Memory] Injecting context into prompt")
+        return base + "\n\n" + context
