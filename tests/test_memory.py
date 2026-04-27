@@ -110,8 +110,8 @@ class TestStore:
         store.store("I like trucks", "Cool!")
         memory_file = tmp_path / "memory.json"
         assert memory_file.exists()
-        data = json.loads(memory_file.read_text())
-        assert len(data) == 1
+        lines = [json.loads(line) for line in memory_file.read_text().splitlines() if line.strip()]
+        assert len(lines) == 1
 
     def test_rebuilds_matrix_after_store(self, store):
         assert store._matrix is None

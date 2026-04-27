@@ -92,7 +92,13 @@ class MemoryStore:
             return
         try:
             with open(self.path) as f:
-                self._entries = json.load(f)
+                first = f.read(1)
+                f.seek(0)
+                if first == "[":
+                    # legacy JSON array — migrate to NDJSON on next save
+                    self._entries = json.load(f)
+                else:
+                    self._entries = [json.loads(line) for line in f if line.strip()]
             self._rebuild_matrix()
             logger.info(f"[Memory] Loaded {len(self._entries)} memories from {self.path}")
         except Exception as e:
@@ -102,6 +108,7 @@ class MemoryStore:
     def _save(self) -> None:
         try:
             with open(self.path, "w") as f:
-                json.dump(self._entries, f)
+                for entry in self._entries:
+                    f.write(json.dumps(entry) + "\n")
         except Exception as e:
             logger.error(f"[Memory] Failed to save memory file: {e}")
