@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -43,7 +44,9 @@ def create_app(camera=None, speaker=None) -> FastAPI:
 
         wake = WakeWordStreamHandler()
         recorder = CommandRecorder()
-        state = "wake"  # wake | command | busy
+        state = "wake"  # wake | command | follow_up | busy
+        follow_up_deadline: float | None = None
+        push_to_talk_active = False
 
         await websocket.send_json({"type": "state", "state": "idle"})
 
@@ -52,26 +55,67 @@ def create_app(camera=None, speaker=None) -> FastAPI:
                 msg = await websocket.receive_json()
                 msg_type = msg.get("type")
 
-                if state == "busy" or msg_type != "audio_chunk":
+                if state == "busy":
+                    continue
+
+                if msg_type == "push_to_talk":
+                    if state in ("wake", "follow_up"):
+                        wake.reset()
+                        recorder = CommandRecorder()
+                        state = "command"
+                        push_to_talk_active = True
+                        follow_up_deadline = None
+                        await websocket.send_json({"type": "state", "state": "listening"})
+                    continue
+
+                if msg_type == "push_to_talk_end":
+                    if state == "command" and push_to_talk_active:
+                        push_to_talk_active = False
+                        wav = recorder.finalize()
+                        if wav is not None:
+                            state = "busy"
+                            await _handle_audio(websocket, llm, memory, speaker, wav)
+                            wake.reset()
+                            recorder = CommandRecorder()
+                            state = "follow_up"
+                            follow_up_deadline = time.monotonic() + 90
+                            await websocket.send_json({"type": "state", "state": "follow_up"})
+                        else:
+                            state = "wake"
+                            await websocket.send_json({"type": "state", "state": "idle"})
+                    continue
+
+                if msg_type != "audio_chunk":
                     continue
 
                 pcm = base64.b64decode(msg["data"])
+
+                if (
+                    state == "follow_up"
+                    and follow_up_deadline is not None
+                    and time.monotonic() > follow_up_deadline
+                ):
+                    state = "wake"
 
                 if state == "wake":
                     if wake.process_chunk(pcm):
                         wake.reset()
                         recorder = CommandRecorder()
                         state = "command"
+                        push_to_talk_active = False
                         await websocket.send_json({"type": "state", "state": "listening"})
 
-                elif state == "command":
+                elif state in ("command", "follow_up"):
                     wav = recorder.feed(pcm)
                     if wav is not None:
                         state = "busy"
+                        push_to_talk_active = False
                         await _handle_audio(websocket, llm, memory, speaker, wav)
                         wake.reset()
                         recorder = CommandRecorder()
-                        state = "wake"
+                        state = "follow_up"
+                        follow_up_deadline = time.monotonic() + 90
+                        await websocket.send_json({"type": "state", "state": "follow_up"})
 
         except WebSocketDisconnect:
             logger.info("Browser disconnected")

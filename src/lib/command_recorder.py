@@ -54,6 +54,12 @@ class CommandRecorder:
                     return self._to_wav()
         return None
 
+    def finalize(self) -> Optional[bytes]:
+        """Force-finalize on button release; returns WAV if speech was captured."""
+        if self._speech_count < _MIN_SPEECH_FRAMES:
+            return None
+        return self._to_wav()
+
     def _to_wav(self) -> bytes:
         buf = io.BytesIO()
         with wave.open(buf, "wb") as wf:

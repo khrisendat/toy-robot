@@ -93,7 +93,7 @@
       text-transform: uppercase;
       opacity: .4;
     }
-    #setup-btn {
+    #setup-btn, #talk-btn {
       margin-top: 18px;
       padding: 13px 46px;
       border-radius: 999px;
@@ -105,10 +105,15 @@
       letter-spacing: .12em;
       cursor: pointer;
       transition: background .15s, color .15s, box-shadow .15s;
+      touch-action: none;
     }
-    #setup-btn:hover:not(:disabled) { box-shadow: 0 0 18px rgba(59,130,246,.45); }
-    #setup-btn:disabled             { opacity: .25; cursor: default; }
-    #setup-btn.hidden               { display: none; }
+    #setup-btn:hover:not(:disabled),
+    #talk-btn:hover:not(:disabled)  { box-shadow: 0 0 18px rgba(59,130,246,.45); }
+    #setup-btn:disabled,
+    #talk-btn:disabled              { opacity: .25; cursor: default; }
+    #setup-btn.hidden,
+    #talk-btn.hidden                { display: none; }
+    #talk-btn:active:not(:disabled) { background: #1d4ed8; color: #fff; box-shadow: 0 0 24px rgba(59,130,246,.6); }
   </style>
 </head>
 <body>
@@ -194,30 +199,38 @@
 
 <div id="status">Connecting…</div>
 <button id="setup-btn" class="hidden">Tap to Start</button>
+<button id="talk-btn"  class="hidden">Hold to Talk</button>
 
 <script>
   const face     = document.getElementById('face');
   const statusEl = document.getElementById('status');
   const setupBtn = document.getElementById('setup-btn');
+  const talkBtn  = document.getElementById('talk-btn');
 
   // ── Playback ───────────────────────────────────────────────────────────────
-  let audioCtx     = null;
-  let audioQueue   = Promise.resolve();
-  let pendingAudio = 0;
+  let audioCtx      = null;
+  let audioQueue    = Promise.resolve();
+  let pendingAudio  = 0;
+  let deferredState = null;
 
   // ── PCM streaming ──────────────────────────────────────────────────────────
   let workletNode      = null;
   let streamingEnabled = false;
 
   // ── State ──────────────────────────────────────────────────────────────────
+  let busy = false;
+
   function setState(s) {
-    face.setAttribute('class', 's-' + s);
-    statusEl.textContent = s === 'idle' ? "say 'hey robot'" : s;
-    // idle → resume streaming; thinking/speaking → pause streaming.
+    face.setAttribute('class', 's-' + (s === 'follow_up' ? 'idle' : s));
+    busy = s === 'thinking' || s === 'speaking';
+    talkBtn.disabled = busy;
+    const labels = { idle: "say 'hey robot'", follow_up: 'listening...' };
+    statusEl.textContent = labels[s] ?? s;
+    // idle/follow_up → resume streaming; thinking/speaking → pause streaming.
     // 'listening' is intentionally not set here — streaming must stay on
     // so the server's CommandRecorder continues receiving the command audio.
-    if (s === 'idle')                              streamingEnabled = true;
-    if (s === 'thinking' || s === 'speaking')      streamingEnabled = false;
+    if (s === 'idle' || s === 'follow_up')    streamingEnabled = true;
+    if (s === 'thinking' || s === 'speaking') streamingEnabled = false;
   }
 
   // ── One-time setup (requires user gesture) ─────────────────────────────────
@@ -255,10 +268,22 @@
     audioCtx.createMediaStreamSource(micStream).connect(workletNode);
 
     setupBtn.classList.add('hidden');
+    talkBtn.classList.remove('hidden');
     setState('idle');
   }
 
   setupBtn.addEventListener('click', setup);
+
+  // ── Hold-to-Talk ───────────────────────────────────────────────────────────
+  function sendPTT(type) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type }));
+  }
+
+  talkBtn.addEventListener('mousedown',  () => { if (!busy) sendPTT('push_to_talk'); });
+  talkBtn.addEventListener('mouseup',    () => sendPTT('push_to_talk_end'));
+  talkBtn.addEventListener('mouseleave', () => sendPTT('push_to_talk_end'));
+  talkBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (!busy) sendPTT('push_to_talk'); });
+  talkBtn.addEventListener('touchend',   (e) => { e.preventDefault(); sendPTT('push_to_talk_end'); });
 
   // ── Playback ───────────────────────────────────────────────────────────────
   function queueAudio(b64) {
@@ -276,7 +301,7 @@
         console.error('[audio]', e);
       } finally {
         pendingAudio--;
-        if (pendingAudio === 0) setState('idle');
+        if (pendingAudio === 0) { setState(deferredState ?? 'idle'); deferredState = null; }
       }
     });
   }
@@ -290,8 +315,13 @@
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
     if (msg.type === 'state') {
-      if (msg.state === 'idle' && pendingAudio === 0) setState('idle');
-      else if (msg.state !== 'idle' && msg.state !== 'speaking') setState(msg.state);
+      const deferUntilAudioDone = msg.state === 'idle' || msg.state === 'follow_up';
+      if (deferUntilAudioDone) {
+        if (pendingAudio === 0) { setState(msg.state); deferredState = null; }
+        else deferredState = msg.state;
+      } else if (msg.state !== 'speaking') {
+        setState(msg.state);
+      }
     } else if (msg.type === 'audio') {
       queueAudio(msg.data);
     } else if (msg.type === 'speak') {
