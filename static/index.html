@@ -128,7 +128,7 @@
 </head>
 <body>
 
-<svg id="face" viewBox="0 0 240 310" xmlns="http://www.w3.org/2000/svg" class="s-idle">
+<svg id="face" viewBox="0 0 240 310" xmlns="http://www.w3.org/2000/svg" class="s-sleeping">
   <defs>
     <linearGradient id="head-g" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%"   stop-color="#4a7fd4"/>
@@ -231,17 +231,17 @@
   let busy = false;
 
   function setState(s) {
-    const cssState = s === 'idle' ? 'sleeping' : s === 'follow_up' ? 'idle' : s;
+    const cssState = s === 'follow_up' ? 'idle' : s;
     face.setAttribute('class', 's-' + cssState);
     busy = s === 'thinking' || s === 'speaking';
     talkBtn.disabled = busy;
-    const labels = { idle: "say 'hey robot'", follow_up: 'listening...' };
+    const labels = { sleeping: "say 'hey robot'", follow_up: 'listening...' };
     statusEl.textContent = labels[s] ?? s;
-    // idle/follow_up → resume streaming; thinking/speaking → pause streaming.
+    // sleeping/follow_up → resume streaming; thinking/speaking → pause streaming.
     // 'listening' is intentionally not set here — streaming must stay on
     // so the server's CommandRecorder continues receiving the command audio.
-    if (s === 'idle' || s === 'follow_up')    streamingEnabled = true;
-    if (s === 'thinking' || s === 'speaking') streamingEnabled = false;
+    if (s === 'sleeping' || s === 'follow_up') streamingEnabled = true;
+    if (s === 'thinking' || s === 'speaking')  streamingEnabled = false;
   }
 
   // ── One-time setup (requires user gesture) ─────────────────────────────────
@@ -280,7 +280,7 @@
 
     setupBtn.classList.add('hidden');
     talkBtn.classList.remove('hidden');
-    setState('idle');
+    setState('sleeping');
   }
 
   setupBtn.addEventListener('click', setup);
@@ -312,7 +312,7 @@
         console.error('[audio]', e);
       } finally {
         pendingAudio--;
-        if (pendingAudio === 0) { setState(deferredState ?? 'idle'); deferredState = null; }
+        if (pendingAudio === 0) { setState(deferredState ?? 'sleeping'); deferredState = null; }
       }
     });
   }
@@ -326,7 +326,7 @@
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
     if (msg.type === 'state') {
-      const deferUntilAudioDone = msg.state === 'idle' || msg.state === 'follow_up';
+      const deferUntilAudioDone = msg.state === 'sleeping' || msg.state === 'follow_up';
       if (deferUntilAudioDone) {
         if (pendingAudio === 0) { setState(msg.state); deferredState = null; }
         else deferredState = msg.state;

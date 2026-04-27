@@ -48,7 +48,7 @@ def create_app(camera=None, speaker=None) -> FastAPI:
         follow_up_deadline: float | None = None
         push_to_talk_active = False
 
-        await websocket.send_json({"type": "state", "state": "idle"})
+        await websocket.send_json({"type": "state", "state": "sleeping"})
 
         try:
             while True:
@@ -86,7 +86,7 @@ def create_app(camera=None, speaker=None) -> FastAPI:
                                 await websocket.send_json({"type": "state", "state": "follow_up"})
                         else:
                             state = "wake"
-                            await websocket.send_json({"type": "state", "state": "idle"})
+                            await websocket.send_json({"type": "state", "state": "sleeping"})
                     continue
 
                 if msg_type != "audio_chunk":
@@ -174,4 +174,4 @@ async def _handle_audio(
         else:
             await websocket.send_json({"type": "speak", "text": text})
 
-    await websocket.send_json({"type": "state", "state": "idle"})
+    await websocket.send_json({"type": "state", "state": "sleeping"})
