@@ -7,12 +7,14 @@ from .memory import MemoryStore
 
 logger = logging.getLogger(__name__)
 
-_ANNOTATION_RE = re.compile(r'\[MEMORY\s+(profile|preference)\s+([\w_]+)="([^"]+)"\]')
+_MEMORY_BLOCK_RE = re.compile(r'\[MEMORY\s+[^\]]+\]')
+_STORE_TYPE_RE = re.compile(r'\[MEMORY\s+(profile|preference)\s+')
+_KV_RE = re.compile(r'([\w_]+)="([^"]+)"')
 _BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 def strip_annotations(text: str) -> str:
-    return _ANNOTATION_RE.sub("", text).strip()
+    return _MEMORY_BLOCK_RE.sub("", text).strip()
 
 
 class KVStore:
@@ -94,13 +96,18 @@ class MemoryManager:
         return "\n\n".join(parts)
 
     def process_annotations(self, text: str) -> str:
-        """Extract [MEMORY ...] tags, persist them, return clean text."""
-        for match in _ANNOTATION_RE.finditer(text):
-            store_type, key, value = match.groups()
-            if store_type == "profile":
-                self.profile.set(key, value)
-                logger.info(f"[Memory] Profile updated: {key}={value}")
-            else:
-                self.preferences.set(key, value)
-                logger.info(f"[Memory] Preference updated: {key}={value}")
+        """Extract [MEMORY ...] tags, persist all key-value pairs, return clean text."""
+        for block in _MEMORY_BLOCK_RE.finditer(text):
+            raw = block.group(0)
+            type_match = _STORE_TYPE_RE.match(raw)
+            if not type_match:
+                continue
+            store_type = type_match.group(1)
+            for key, value in _KV_RE.findall(raw):
+                if store_type == "profile":
+                    self.profile.set(key, value)
+                    logger.info(f"[Memory] Profile updated: {key}={value}")
+                else:
+                    self.preferences.set(key, value)
+                    logger.info(f"[Memory] Preference updated: {key}={value}")
         return strip_annotations(text)

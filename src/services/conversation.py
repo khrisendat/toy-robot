@@ -185,12 +185,13 @@ class ConversationManager:
             yield "I'm sorry, I'm having a little trouble thinking right now."
             return
 
+        logger.info(f"[Response raw] {full_text}")
         if hasattr(self.memory, "process_annotations"):
             clean_full_text = self.memory.process_annotations(full_text)
         else:
             clean_full_text = full_text
 
-        logger.info(f"LLM complete ({time.time() - start:.2f}s): {clean_full_text}")
+        logger.info(f"[Response clean] ({time.time() - start:.2f}s): {clean_full_text}")
         self._history.append({"role": "user", "parts": [{"text": history_text}]})
         self._history.extend(tool_turns)
         self._history.append({"role": "model", "parts": [{"text": clean_full_text}]})
@@ -300,6 +301,8 @@ class ConversationManager:
             )
 
         if not context:
+            logger.info(f"[Prompt]\n{base}")
             return base
-        logger.debug("[Memory] Injecting context into prompt")
-        return base + "\n\n" + context
+        result = base + "\n\n" + context
+        logger.info(f"[Prompt]\n{result}")
+        return result

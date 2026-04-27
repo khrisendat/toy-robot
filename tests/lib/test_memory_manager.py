@@ -22,6 +22,11 @@ def test_strip_annotations_removes_multiple_tags():
     assert strip_annotations(text) == "Got it!"
 
 
+def test_strip_annotations_removes_multi_kv_tag():
+    text = 'Cool fish! [MEMORY preference pet="fish" pet_name="Jetty" pet_species="zebra loach"]'
+    assert strip_annotations(text) == "Cool fish!"
+
+
 class TestKVStore:
     def test_set_and_get(self, tmp_path):
         store = KVStore(str(tmp_path / "test.json"))
@@ -65,6 +70,14 @@ class TestMemoryManager:
         clean = manager.process_annotations('I love trucks! [MEMORY preference likes="trucks"]')
         assert clean == "I love trucks!"
         assert manager.preferences.get("likes") == "trucks"
+
+    def test_process_annotations_handles_multi_kv_tag(self, manager):
+        text = 'Cool fish! [MEMORY preference pet="fish" pet_name="Jetty" pet_species="zebra loach"]'
+        clean = manager.process_annotations(text)
+        assert clean == "Cool fish!"
+        assert manager.preferences.get("pet") == "fish"
+        assert manager.preferences.get("pet_name") == "Jetty"
+        assert manager.preferences.get("pet_species") == "zebra loach"
 
     def test_process_annotations_handles_robot_name(self, manager):
         manager.process_annotations('You can call me Beep! [MEMORY profile robot_name="Beep"]')
