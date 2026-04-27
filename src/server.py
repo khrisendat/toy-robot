@@ -82,7 +82,7 @@ def create_app(camera=None, speaker=None) -> FastAPI:
                                 state = "wake"
                             else:
                                 state = "follow_up"
-                                follow_up_deadline = time.monotonic() + 90
+                                follow_up_deadline = time.monotonic() + llm._cfg.follow_up_seconds
                                 await websocket.send_json({"type": "state", "state": "follow_up"})
                         else:
                             state = "wake"
@@ -122,7 +122,7 @@ def create_app(camera=None, speaker=None) -> FastAPI:
                             state = "wake"
                         else:
                             state = "follow_up"
-                            follow_up_deadline = time.monotonic() + 90
+                            follow_up_deadline = time.monotonic() + llm._cfg.follow_up_seconds
                             await websocket.send_json({"type": "state", "state": "follow_up"})
 
         except WebSocketDisconnect:

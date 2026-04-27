@@ -41,6 +41,7 @@ class ConversationConfig:
     assistant_label: str = "Assistant"
     tools: list = field(default_factory=list)  # list[Tool]
     thinking_budget: int = -1  # -1 = dynamic, 0 = disabled, 1-24576 = fixed cap
+    follow_up_seconds: int = 90
 
 
 _ANNOTATION_INSTRUCTION = (
