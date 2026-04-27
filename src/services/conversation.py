@@ -50,7 +50,8 @@ _ANNOTATION_INSTRUCTION = (
     "append [MEMORY preference key=\"value\"] at the very end. "
     "If the child gives you a new name to call yourself, append [MEMORY profile robot_name=\"name\"]. "
     "Use short lowercase keys like: called, age, pet, sibling, likes, dislikes, scared_of, robot_name. "
-    "Only annotate genuinely new information not already in your context. Never say the tags aloud."
+    "Only annotate genuinely new information not already in your context. Never say the tags aloud. "
+    "When Kabir says goodbye or goodnight, respond warmly and append [SLEEP] at the very end."
 )
 
 CHILD_ROBOT_CONFIG = ConversationConfig(
@@ -94,6 +95,7 @@ class ConversationManager:
         self._cfg = cfg
         self._history = []  # list of {"role": ..., "parts": [...]} dicts (text only)
         self.memory = memory
+        self._sleep_requested = False
 
     def generate_response(self, audio_data, store_memory=None):
         """
@@ -135,6 +137,7 @@ class ConversationManager:
 
     def generate_response_stream(self, audio_data, store_memory=None):
         """Yield sentences as they are generated."""
+        self._sleep_requested = False
         user_parts, history_text = self._prepare_input(audio_data)
         system_prompt = self._build_system_prompt(history_text)
         contents = self._history + [{"role": "user", "parts": user_parts}]
@@ -186,10 +189,11 @@ class ConversationManager:
             return
 
         logger.info(f"[Response raw] {full_text}")
+        self._sleep_requested = bool(re.search(r'\[SLEEP\]', full_text, re.IGNORECASE))
         if hasattr(self.memory, "process_annotations"):
             clean_full_text = self.memory.process_annotations(full_text)
         else:
-            clean_full_text = full_text
+            clean_full_text = re.sub(r'\[SLEEP\]', '', full_text, flags=re.IGNORECASE).strip()
 
         logger.info(f"[Response clean] ({time.time() - start:.2f}s): {clean_full_text}")
         self._history.append({"role": "user", "parts": [{"text": history_text}]})

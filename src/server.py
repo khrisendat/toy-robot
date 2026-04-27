@@ -77,9 +77,13 @@ def create_app(camera=None, speaker=None) -> FastAPI:
                             await _handle_audio(websocket, llm, memory, speaker, wav)
                             wake.reset()
                             recorder = CommandRecorder()
-                            state = "follow_up"
-                            follow_up_deadline = time.monotonic() + 90
-                            await websocket.send_json({"type": "state", "state": "follow_up"})
+                            if llm._sleep_requested:
+                                llm._sleep_requested = False
+                                state = "wake"
+                            else:
+                                state = "follow_up"
+                                follow_up_deadline = time.monotonic() + 90
+                                await websocket.send_json({"type": "state", "state": "follow_up"})
                         else:
                             state = "wake"
                             await websocket.send_json({"type": "state", "state": "idle"})
@@ -113,9 +117,13 @@ def create_app(camera=None, speaker=None) -> FastAPI:
                         await _handle_audio(websocket, llm, memory, speaker, wav)
                         wake.reset()
                         recorder = CommandRecorder()
-                        state = "follow_up"
-                        follow_up_deadline = time.monotonic() + 90
-                        await websocket.send_json({"type": "state", "state": "follow_up"})
+                        if llm._sleep_requested:
+                            llm._sleep_requested = False
+                            state = "wake"
+                        else:
+                            state = "follow_up"
+                            follow_up_deadline = time.monotonic() + 90
+                            await websocket.send_json({"type": "state", "state": "follow_up"})
 
         except WebSocketDisconnect:
             logger.info("Browser disconnected")
