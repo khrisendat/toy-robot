@@ -11,6 +11,7 @@ _EMOJI_RE = re.compile(
 def sanitize_for_speech(text: str) -> str:
     text = _EMOJI_RE.sub("", text)
     text = re.sub(r"<think(?:ing)?>\s*[\s\S]*?</think(?:ing)?>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^thought\s*\n", "", text, flags=re.IGNORECASE)
     text = re.sub(r"tool_code\s*\n[\s\S]*", "", text)
     text = re.sub(r"\[SLEEP\]", "", text, flags=re.IGNORECASE)
     text = re.sub(r"[*#_~`|<>^]", "", text)

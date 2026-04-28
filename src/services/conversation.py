@@ -151,11 +151,14 @@ class ConversationManager:
         current_contents = contents
 
         try:
-            for _ in range(6):  # up to 5 tool calls then a final text response
+            for turn in range(6):  # up to 5 tool calls then a final text response
                 buffer = ""
                 function_call = None
+                # Disable thinking after tool calls — post-tool responses are short
+                # spoken sentences and Gemini 2.5 leaks thinking as plain text in that path.
+                budget = self._cfg.thinking_budget if turn == 0 else 0
 
-                for chunk in self._client.generate_stream(current_contents, system_prompt, declarations, thinking_budget=self._cfg.thinking_budget):
+                for chunk in self._client.generate_stream(current_contents, system_prompt, declarations, thinking_budget=budget):
                     if isinstance(chunk, dict):
                         function_call = chunk["function_call"]
                         break
