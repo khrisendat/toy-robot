@@ -105,6 +105,6 @@ class TestMemoryManager:
         assert "Preferences:" in context
         assert "likes: dinosaurs" in context
 
-    def test_store_delegates_to_episodic(self, manager):
+    def test_store_is_noop_while_episodic_disabled(self, manager):
         manager.store("hello", "hi there", "Child", "Robot")
-        assert len(manager.episodic._entries) == 1
+        assert len(manager.episodic._entries) == 0

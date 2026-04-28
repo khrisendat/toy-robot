@@ -72,7 +72,9 @@ class MemoryManager:
         user_label: str = "User",
         assistant_label: str = "Assistant",
     ) -> None:
-        self.episodic.store(user_text, robot_text, user_label, assistant_label)
+        # Episodic storage disabled: user_text is always "[voice input]" (no transcript),
+        # making semantic search useless. Re-enable once transcription is available.
+        pass
 
     def build_context(self, query: str) -> str:
         """Return the memory block to append to the system prompt."""
@@ -88,10 +90,8 @@ class MemoryManager:
             lines = "\n".join(f"- {k}: {v}" for k, v in pref_items)
             parts.append(f"Preferences:\n{lines}")
 
-        episodes = self.episodic.search(query, top_k=3)
-        if episodes:
-            lines = "\n".join(f"- {e}" for e in episodes)
-            parts.append(f"Past conversations:\n{lines}")
+        # Episodic search disabled until real transcripts are available.
+        # episodes = self.episodic.search(query, top_k=3)
 
         return "\n\n".join(parts)
 
