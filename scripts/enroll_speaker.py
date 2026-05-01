@@ -14,6 +14,9 @@ Usage:
 
     # List enrolled speakers:
     python scripts/enroll_speaker.py --list
+
+    # Test identification (record and see who the model thinks it is):
+    python scripts/enroll_speaker.py --identify
 """
 
 import argparse
@@ -66,6 +69,7 @@ def main():
     parser.add_argument("--duration", type=int, default=8, help="Recording duration in seconds (default: 8)")
     parser.add_argument("--file", help="Path to an existing WAV file to use instead of recording")
     parser.add_argument("--list", action="store_true", help="List enrolled speakers and exit")
+    parser.add_argument("--identify", action="store_true", help="Record and identify the speaker")
     args = parser.parse_args()
 
     sid = SpeakerIdentifier()
@@ -79,8 +83,20 @@ def main():
                 print(f"  {name}: {sid.sample_count(name)} sample(s)")
         return
 
+    if args.identify:
+        if not sid.speakers():
+            print("No speakers enrolled yet. Enroll someone first.")
+            return
+        wav_bytes = record_wav(args.duration)
+        name = sid.identify(wav_bytes)
+        if name:
+            print(f"Identified: {name}")
+        else:
+            print("Unknown speaker (no match above threshold)")
+        return
+
     if not args.name:
-        parser.error("--name is required unless --list is specified")
+        parser.error("--name is required unless --list or --identify is specified")
 
     if args.file:
         with open(args.file, "rb") as f:

@@ -1,4 +1,5 @@
 resemblyzer
+kuzu
 fastapi
 uvicorn[standard]
 py-trees

@@ -140,3 +140,6 @@ preferences.json
 
 # macOS conversation log
 mac_conversation.log
+
+# voice samples
+speakers.json
