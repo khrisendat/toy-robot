@@ -20,11 +20,12 @@ _BUSY = "busy"
 
 
 class RobotSession:
-    def __init__(self, llm, memory: MemoryManager, speaker=None, speaker_id=None):
+    def __init__(self, llm, memory: MemoryManager, speaker=None, speaker_id=None, media_store=None):
         self._llm = llm
         self._memory = memory
         self._speaker = speaker
         self._speaker_id = speaker_id  # SpeakerIdentifier | None
+        self._media_store = media_store  # MediaStore | None
         self._wake = WakeWordStreamHandler()
         self._recorder = CommandRecorder()
         self._state = _WAKE
@@ -114,6 +115,8 @@ class RobotSession:
         speaker_name = (
             self._speaker_id.identify(wav) if self._speaker_id else None
         )
+        if self._media_store is not None:
+            self._media_store.save_audio(wav, speaker_name=speaker_name)
 
         def stream_sentences():
             try:

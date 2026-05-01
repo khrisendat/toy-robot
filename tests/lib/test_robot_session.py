@@ -87,6 +87,7 @@ def session():
     s._wake = _Wake()
     s._recorder = _Recorder()
     s._speaker_id = None
+    s._media_store = None
     return s
 
 

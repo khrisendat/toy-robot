@@ -124,12 +124,14 @@ web_search = Tool(
 )
 
 
-def make_camera_tool(get_image):
+def make_camera_tool(get_image, media_store=None):
     """Factory that returns a capture_image Tool bound to the given get_image callable."""
     def _capture():
         data = get_image()
         if data is None:
             return {"error": "Camera capture failed."}
+        if media_store is not None:
+            media_store.save_image(data)
         return {"__inline_data__": {"mimeType": "image/jpeg", "data": data}}
 
     return Tool(
