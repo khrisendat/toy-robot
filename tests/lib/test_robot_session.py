@@ -58,7 +58,7 @@ class _LLM:
         self._sleep_requested = sleep_requested
         self._cfg = type("cfg", (), {"follow_up_seconds": 10})()
 
-    def generate_response_stream(self, wav, store_memory=None):
+    def generate_response_stream(self, wav, store_memory=None, speaker_name=None):
         yield from self._sentences
 
 
@@ -86,6 +86,7 @@ def session():
     s._follow_up_deadline = None
     s._wake = _Wake()
     s._recorder = _Recorder()
+    s._speaker_id = None
     return s
 
 

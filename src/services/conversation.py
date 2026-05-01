@@ -136,10 +136,10 @@ class ConversationManager:
             logger.error(f"LLM error after {elapsed:.2f}s: {e}")
             return "I'm sorry, I'm having a little trouble thinking right now."
 
-    def generate_response_stream(self, audio_data, store_memory=None):
+    def generate_response_stream(self, audio_data, store_memory=None, speaker_name=None):
         """Yield sentences as they are generated."""
         self._sleep_requested = False
-        user_parts, history_text = self._prepare_input(audio_data)
+        user_parts, history_text = self._prepare_input(audio_data, speaker_name=speaker_name)
         system_prompt = self._build_system_prompt(history_text)
         contents = self._history + [{"role": "user", "parts": user_parts}]
         start = time.time()
@@ -210,11 +210,14 @@ class ConversationManager:
     # Internal
     # ------------------------------------------------------------------
 
-    def _prepare_input(self, audio_data):
+    def _prepare_input(self, audio_data, speaker_name=None):
         if isinstance(audio_data, bytes):
+            instruction = self._cfg.audio_instruction
+            if speaker_name:
+                instruction = f"You are speaking with {speaker_name}. " + instruction
             user_parts = [
                 self._client.encode_audio(audio_data),
-                {"text": self._cfg.audio_instruction},
+                {"text": instruction},
             ]
             history_text = "[voice input]"
         else:

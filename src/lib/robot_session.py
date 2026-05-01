@@ -20,10 +20,11 @@ _BUSY = "busy"
 
 
 class RobotSession:
-    def __init__(self, llm, memory: MemoryManager, speaker=None):
+    def __init__(self, llm, memory: MemoryManager, speaker=None, speaker_id=None):
         self._llm = llm
         self._memory = memory
         self._speaker = speaker
+        self._speaker_id = speaker_id  # SpeakerIdentifier | None
         self._wake = WakeWordStreamHandler()
         self._recorder = CommandRecorder()
         self._state = _WAKE
@@ -110,9 +111,13 @@ class RobotSession:
         def store_turn(user_text, robot_text, user_label, assistant_label):
             self._memory.store(user_text, robot_text, user_label, assistant_label)
 
+        speaker_name = (
+            self._speaker_id.identify(wav) if self._speaker_id else None
+        )
+
         def stream_sentences():
             try:
-                for sentence in self._llm.generate_response_stream(wav, store_turn):
+                for sentence in self._llm.generate_response_stream(wav, store_turn, speaker_name=speaker_name):
                     loop.call_soon_threadsafe(sentence_queue.put_nowait, sentence)
             except Exception as e:
                 logger.error(f"Stream error: {e}")

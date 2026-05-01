@@ -1,3 +1,4 @@
+resemblyzer
 fastapi
 uvicorn[standard]
 py-trees
