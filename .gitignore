@@ -143,3 +143,9 @@ mac_conversation.log
 
 # voice samples
 speakers.json
+
+# graph database
+graph.db/
+
+# media recordings
+recordings/
