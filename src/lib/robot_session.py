@@ -6,7 +6,7 @@ from typing import AsyncIterator
 
 from ..hardware.wake_word import WakeWordStreamHandler
 from ..lib.command_recorder import CommandRecorder
-from ..lib.memory_manager import MemoryManager
+from ..lib.robot_memory import RobotMemory
 from ..lib.speech import sanitize_for_speech
 
 logger = logging.getLogger(__name__)
@@ -20,12 +20,10 @@ _BUSY = "busy"
 
 
 class RobotSession:
-    def __init__(self, llm, memory: MemoryManager, speaker=None, speaker_id=None, media_store=None):
+    def __init__(self, llm, memory: RobotMemory, speaker=None):
         self._llm = llm
         self._memory = memory
         self._speaker = speaker
-        self._speaker_id = speaker_id  # SpeakerIdentifier | None
-        self._media_store = media_store  # MediaStore | None
         self._wake = WakeWordStreamHandler()
         self._recorder = CommandRecorder()
         self._state = _WAKE
@@ -109,14 +107,11 @@ class RobotSession:
         loop = asyncio.get_running_loop()
         sentence_queue: asyncio.Queue = asyncio.Queue()
 
-        def store_turn(user_text, robot_text, user_label, assistant_label):
-            self._memory.store(user_text, robot_text, user_label, assistant_label)
+        speaker_name = self._memory.speaker.identify(wav) if self._memory.speaker else None
 
-        speaker_name = (
-            self._speaker_id.identify(wav) if self._speaker_id else None
-        )
-        if self._media_store is not None:
-            self._media_store.save_audio(wav, speaker_name=speaker_name)
+        def store_turn(user_text, robot_text, user_label, assistant_label):
+            self._memory.record_turn(user_text, robot_text, speaker_name=speaker_name)
+        self._memory.save_audio(wav, speaker_name=speaker_name)
 
         def stream_sentences():
             try:

@@ -133,19 +133,8 @@ service-account-key.json
 # Generated audio files
 output.mp3
 
-# Conversation memory
-memory.json
-profile.json
-preferences.json
-
 # macOS conversation log
 mac_conversation.log
 
-# voice samples
-speakers.json
-
-# graph database
-graph.db/
-
-# media recordings
-recordings/
+# all runtime data
+data/

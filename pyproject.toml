@@ -1,6 +1,8 @@
 [tool.pytest.ini_options]
 # test_grayscale and test_wheels are Pi hardware scripts, not pytest tests.
 addopts = "--ignore=tests/test_grayscale.py --ignore=tests/test_wheels.py"
+pythonpath = ["memorylib/src"]
+testpaths = ["tests", "memorylib/tests"]
 
 [tool.ruff]
 target-version = "py311"

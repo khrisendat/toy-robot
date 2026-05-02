@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memorylib"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "kuzu",
+    "numpy",
+    "sentence-transformers",
+]
+
+[project.optional-dependencies]
+speaker = ["resemblyzer"]
+face = ["face_recognition", "Pillow"]
+
+[project.scripts]
+enroll-speaker = "memorylib.cli:main"
+enroll-face = "memorylib.face_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

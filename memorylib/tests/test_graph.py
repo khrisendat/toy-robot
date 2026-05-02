@@ -1,17 +1,12 @@
-
 import pytest
 
-from src.lib.graph_store import GraphStore
+from memorylib import GraphStore
 
 
 @pytest.fixture
 def graph(tmp_path):
     return GraphStore(path=str(tmp_path / "test.db"))
 
-
-# ---------------------------------------------------------------------------
-# Entity
-# ---------------------------------------------------------------------------
 
 class TestEntity:
     def test_upsert_and_get(self, graph):
@@ -41,10 +36,6 @@ class TestEntity:
         assert GraphStore(path=path).get_entity("Kabir") == {"name": "Kabir", "type": "person"}
 
 
-# ---------------------------------------------------------------------------
-# Relation
-# ---------------------------------------------------------------------------
-
 class TestRelation:
     def test_upsert_relation(self, graph):
         graph.upsert_entity("Kabir", "person")
@@ -60,8 +51,7 @@ class TestRelation:
         graph.upsert_entity("Kabir", "person")
         graph.upsert_entity("dinosaurs", "topic")
         graph.upsert_relation("Kabir", "likes", "dinosaurs", props={"intensity": "high"})
-        relations = graph.all_relations()
-        assert relations[0]["props"] == {"intensity": "high"}
+        assert graph.all_relations()[0]["props"] == {"intensity": "high"}
 
     def test_upsert_relation_updates_props(self, graph):
         graph.upsert_entity("Kabir", "person")
@@ -80,10 +70,6 @@ class TestRelation:
         assert len(graph.all_relations()) == 2
 
 
-# ---------------------------------------------------------------------------
-# get_neighbors
-# ---------------------------------------------------------------------------
-
 class TestGetNeighbors:
     @pytest.fixture(autouse=True)
     def _setup(self, graph):
@@ -97,13 +83,11 @@ class TestGetNeighbors:
         graph.upsert_relation("Dada", "family_of", "Kabir")
 
     def test_outbound_neighbors(self):
-        neighbors = self.graph.get_neighbors("Kabir")
-        names = {row[0] for row in neighbors}
+        names = {row[0] for row in self.graph.get_neighbors("Kabir")}
         assert names == {"Jetty", "dinosaurs"}
 
     def test_inbound_neighbors(self):
-        neighbors = self.graph.get_neighbors("Kabir", direction="in")
-        names = {row[0] for row in neighbors}
+        names = {row[0] for row in self.graph.get_neighbors("Kabir", direction="in")}
         assert names == {"Dada"}
 
     def test_filter_by_rel_type(self):
@@ -115,10 +99,6 @@ class TestGetNeighbors:
         self.graph.upsert_entity("Isolated", "person")
         assert self.graph.get_neighbors("Isolated") == []
 
-
-# ---------------------------------------------------------------------------
-# Raw query
-# ---------------------------------------------------------------------------
 
 class TestQuery:
     def test_raw_cypher_query(self, graph):

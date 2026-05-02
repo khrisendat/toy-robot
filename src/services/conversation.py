@@ -7,7 +7,7 @@ from typing import Callable
 
 from .. import config
 from ..lib.gemini import GeminiClient
-from ..lib.memory_manager import strip_annotations
+from ..lib.robot_memory import strip_annotations
 
 
 def _extract_sentences(text):
@@ -295,8 +295,8 @@ class ConversationManager:
             return base
 
         robot_name = None
-        if hasattr(self.memory, "profile"):
-            robot_name = self.memory.profile.get("robot_name")
+        if hasattr(self.memory, "get_robot_name"):
+            robot_name = self.memory.get_robot_name()
         if robot_name:
             base = f"Your name is {robot_name}. " + base
 

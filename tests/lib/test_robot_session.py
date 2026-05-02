@@ -63,13 +63,16 @@ class _LLM:
 
 
 class _Memory:
-    profile = {}
+    speaker = None
 
     def store(self, *a):
         pass
 
     def build_context(self, q):
         return ""
+
+    def save_audio(self, wav, **tags):
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -86,8 +89,6 @@ def session():
     s._follow_up_deadline = None
     s._wake = _Wake()
     s._recorder = _Recorder()
-    s._speaker_id = None
-    s._media_store = None
     return s
 
 

@@ -4,10 +4,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .lib.media_store import MediaStore
-from .lib.memory_manager import MemoryManager
+from .lib.robot_memory import RobotMemory
 from .lib.robot_session import RobotSession
-from .lib.speaker_id import SpeakerIdentifier
 from .services import (
     tools as _tools,  # noqa: F401 — registers static tools into configs
 )
@@ -20,13 +18,11 @@ logger = logging.getLogger(__name__)
 def create_app(camera=None, speaker=None) -> FastAPI:
     app = FastAPI()
 
-    memory = MemoryManager()
-    speaker_id = SpeakerIdentifier() if SpeakerIdentifier.profiles_exist() else None
-    media_store = MediaStore()
+    memory = RobotMemory()
 
     if camera is not None:
         if not any(t.name == "capture_image" for t in CHILD_ROBOT_CONFIG.tools):
-            CHILD_ROBOT_CONFIG.tools.append(make_camera_tool(camera.capture_jpeg, media_store=media_store))
+            CHILD_ROBOT_CONFIG.tools.append(make_camera_tool(camera.capture_jpeg, media_store=memory))
 
     llm = ConversationManager(cfg=CHILD_ROBOT_CONFIG, memory=memory)
 
@@ -41,7 +37,7 @@ def create_app(camera=None, speaker=None) -> FastAPI:
         await websocket.accept()
         logger.info("Browser connected")
 
-        session = RobotSession(llm, memory, speaker, speaker_id=speaker_id, media_store=media_store)
+        session = RobotSession(llm, memory, speaker)
         await websocket.send_json({"type": "state", "state": "sleeping"})
 
         try:

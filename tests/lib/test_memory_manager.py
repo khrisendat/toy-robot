@@ -1,6 +1,6 @@
 import pytest
 
-from src.lib.memory_manager import KVStore, MemoryManager, strip_annotations
+from src.lib.robot_memory import RobotMemory, strip_annotations
 
 
 def test_strip_annotations_removes_profile_tag():
@@ -27,84 +27,87 @@ def test_strip_annotations_removes_multi_kv_tag():
     assert strip_annotations(text) == "Cool fish!"
 
 
-class TestKVStore:
-    def test_set_and_get(self, tmp_path):
-        store = KVStore(str(tmp_path / "test.json"))
-        store.set("name", "Whoopsie")
-        assert store.get("name") == "Whoopsie"
-
-    def test_get_missing_returns_default(self, tmp_path):
-        store = KVStore(str(tmp_path / "test.json"))
-        assert store.get("missing") is None
-        assert store.get("missing", "fallback") == "fallback"
-
-    def test_persists_to_disk(self, tmp_path):
-        path = str(tmp_path / "test.json")
-        KVStore(path).set("name", "Whoopsie")
-        assert KVStore(path).get("name") == "Whoopsie"
-
-    def test_items_returns_all(self, tmp_path):
-        store = KVStore(str(tmp_path / "test.json"))
-        store.set("a", "1")
-        store.set("b", "2")
-        assert dict(store.items()) == {"a": "1", "b": "2"}
-
-    def test_overwrite_existing_key(self, tmp_path):
-        store = KVStore(str(tmp_path / "test.json"))
-        store.set("name", "first")
-        store.set("name", "second")
-        assert store.get("name") == "second"
-
-
-class TestMemoryManager:
+class TestRobotMemory:
     @pytest.fixture
-    def manager(self, tmp_path):
-        return MemoryManager(base_dir=str(tmp_path))
+    def memory(self, tmp_path):
+        return RobotMemory(base_dir=str(tmp_path), user_name="Kabir")
 
-    def test_process_annotations_updates_profile(self, manager):
-        clean = manager.process_annotations('Call me Whoopsie! [MEMORY profile called="Whoopsie"]')
+    def test_process_annotations_profile(self, memory):
+        clean = memory.process_annotations('Call me Whoopsie! [MEMORY profile called="Whoopsie"]')
         assert clean == "Call me Whoopsie!"
-        assert manager.profile.get("called") == "Whoopsie"
+        rows = memory.graph.get_neighbors("Kabir", rel_type="called")
+        assert rows[0][0] == "Whoopsie"
 
-    def test_process_annotations_updates_preference(self, manager):
-        clean = manager.process_annotations('I love trucks! [MEMORY preference likes="trucks"]')
+    def test_process_annotations_preference(self, memory):
+        clean = memory.process_annotations('I love trucks! [MEMORY preference likes="trucks"]')
         assert clean == "I love trucks!"
-        assert manager.preferences.get("likes") == "trucks"
+        rows = memory.graph.get_neighbors("Kabir", rel_type="likes")
+        assert rows[0][0] == "trucks"
 
-    def test_process_annotations_handles_multi_kv_tag(self, manager):
+    def test_process_annotations_robot_name(self, memory):
+        memory.process_annotations('You can call me Beep! [MEMORY profile robot_name="Beep"]')
+        assert memory.get_robot_name() == "Beep"
+
+    def test_process_annotations_pet_group(self, memory):
         text = 'Cool fish! [MEMORY preference pet="fish" pet_name="Jetty" pet_species="zebra loach"]'
-        clean = manager.process_annotations(text)
-        assert clean == "Cool fish!"
-        assert manager.preferences.get("pet") == "fish"
-        assert manager.preferences.get("pet_name") == "Jetty"
-        assert manager.preferences.get("pet_species") == "zebra loach"
+        memory.process_annotations(text)
+        pet_rows = memory.graph.get_neighbors("Kabir", rel_type="has_pet")
+        assert pet_rows[0][0] == "Jetty"
+        type_rows = memory.graph.get_neighbors("Jetty", rel_type="pet_type")
+        assert type_rows[0][0] == "fish"
+        species_rows = memory.graph.get_neighbors("Jetty", rel_type="species")
+        assert species_rows[0][0] == "zebra loach"
 
-    def test_process_annotations_handles_robot_name(self, manager):
-        manager.process_annotations('You can call me Beep! [MEMORY profile robot_name="Beep"]')
-        assert manager.profile.get("robot_name") == "Beep"
+    def test_build_context_empty(self, memory):
+        assert memory.build_context() == ""
 
-    def test_build_context_empty(self, manager):
-        assert manager.build_context("hello") == ""
+    def test_build_context_includes_fact(self, memory):
+        memory.process_annotations('[MEMORY profile called="Whoopsie"]')
+        ctx = memory.build_context()
+        assert "Facts about Kabir" in ctx
+        assert "called: Whoopsie" in ctx
 
-    def test_build_context_includes_profile(self, manager):
-        manager.profile.set("called", "Whoopsie")
-        context = manager.build_context("what is my name")
-        assert "Profile:" in context
-        assert "called: Whoopsie" in context
+    def test_build_context_excludes_robot_name(self, memory):
+        memory.process_annotations('[MEMORY profile robot_name="Beep"]')
+        ctx = memory.build_context()
+        assert "robot_name" not in ctx
 
-    def test_build_context_excludes_robot_name_from_profile_block(self, manager):
-        manager.profile.set("robot_name", "Beep")
-        manager.profile.set("called", "Whoopsie")
-        context = manager.build_context("hello")
-        assert "robot_name" not in context
-        assert "called: Whoopsie" in context
+    def test_build_context_parent(self, memory):
+        memory.process_annotations('[MEMORY profile dada="yes"]')
+        ctx = memory.build_context()
+        assert "dada: yes" in ctx
 
-    def test_build_context_includes_preferences(self, manager):
-        manager.preferences.set("likes", "dinosaurs")
-        context = manager.build_context("hello")
-        assert "Preferences:" in context
-        assert "likes: dinosaurs" in context
+    def test_build_context_pet_rendering(self, memory):
+        memory.process_annotations('[MEMORY preference pet="fish" pet_name="Jetty"]')
+        ctx = memory.build_context()
+        assert "pet_name: Jetty" in ctx
+        assert "pet: fish" in ctx
 
-    def test_store_is_noop_while_episodic_disabled(self, manager):
-        manager.store("hello", "hi there", "Child", "Robot")
-        assert len(manager.episodic._entries) == 0
+    def test_get_robot_name_none_by_default(self, memory):
+        assert memory.get_robot_name() is None
+
+    def test_record_turn_stores_episodic_entry(self, memory):
+        memory.record_turn("hello", "hi there")
+        assert len(memory.episodic) == 1
+
+    def test_record_turn_stores_speaker_metadata(self, memory, tmp_path):
+        import json
+        memory.record_turn("hello", "hi there", speaker_name="Kabir")
+        path = tmp_path / "episodic.jsonl"
+        entry = json.loads(path.read_text().strip())
+        assert entry["metadata"]["speaker"] == "Kabir"
+
+    def test_record_turn_asserts_last_seen_for_non_primary_speaker(self, memory):
+        memory.record_turn("hey", "hello!", speaker_name="Dada")
+        rows = memory.graph.get_neighbors("Dada", rel_type="last_seen")
+        assert len(rows) == 1
+
+    def test_record_turn_does_not_assert_last_seen_for_primary_user(self, memory):
+        memory.record_turn("hey", "hello!", speaker_name="Kabir")
+        rows = memory.graph.get_neighbors("Kabir", rel_type="last_seen")
+        assert len(rows) == 0
+
+    def test_record_turn_no_speaker_no_graph_change(self, memory):
+        before = len(memory.graph.all_relations())
+        memory.record_turn("hey", "hello!", speaker_name=None)
+        assert len(memory.graph.all_relations()) == before
